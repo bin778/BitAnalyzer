@@ -1,0 +1,13 @@
+# venv File
+.bit
+
+# .env File
+.env
+
+# .DS_Store
+.DS_Store
+
+# Python File
+__pycache__/
+*.pyc
+*.egg-info/
