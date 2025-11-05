@@ -1,0 +1,15 @@
+<PriceTrackerLayout>:
+    orientation: 'vertical'
+    padding: 20
+    spacing: 10
+
+    Label:
+        id: price_label 
+        text: 'BTC/USDT: Waiting...'
+        font_size: '32sp'
+        halign: 'center'
+        
+    Button:
+        text: 'Refresh'
+        size_hint: (1, 0.3)
+        on_press: root.start_fetch_thread()
