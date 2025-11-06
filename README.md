@@ -1,6 +1,6 @@
 # 🪙 BitAnalyzer
 
-> Kivy와 Python을 사용한 실시간 암호화폐 시세 비교 프로그램.
+> Kivy와 Python을 사용한 실시간 암호화폐 시세 비교 프로그램. 현재는 Binance, UPBIT, ByBit 시세세 비교하는 프로그램 구현.
 
 ---
 
@@ -12,7 +12,7 @@
 
 ## ✨ 주요 기능
 
-- 여러 비트코인 거래소의 **BTC/USDT 현재 시세 표시**
+- 여러 비트코인 거래소(Binance, UPBIT, ByBit)의 **BTC/USDT, BTC/KRW 현재 시세 표시**
 - **'Refresh' 버튼**을 통한 수동 새로고침
 - **`.kv` 파일**을 사용한 선언적 UI 디자인 적용
 
