@@ -1,14 +1,23 @@
 <PriceTrackerLayout>:
     orientation: 'vertical'
     padding: 20
-    spacing: 10
+    spacing: 15
 
     Label:
-        id: price_label 
-        text: 'BTC/USDT: Waiting...'
-        font_size: '32sp'
+        id: binance_label 
+        text: 'Binance: Waiting...'
+        font_size: '24sp'
         halign: 'center'
-        
+    Label:
+        id: upbit_label
+        text: 'Upbit: Waiting...'
+        font_size: '24sp'
+        halign: 'center'
+    Label:
+        id: bybit_label
+        text: 'Bybit: Waiting...'
+        font_size: '24sp'
+        halign: 'center'
     Button:
         text: 'Refresh'
         size_hint: (1, 0.3)

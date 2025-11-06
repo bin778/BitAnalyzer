@@ -8,7 +8,7 @@ from ui.tracker_layout import PriceTrackerLayout
 
 class PriceTrackerApp(App):
     def build(self):
-        Window.size = (400, 200)
+        Window.size = (400, 350)
         
         try:
             price_service = PriceService()
@@ -17,7 +17,7 @@ class PriceTrackerApp(App):
         
         except ValueError as e:
             print(f"앱 시작 에러: {e}")
-            return Label(text=f"설정 오류:\n{e}", halign='center')
+            return Label(text=f"설정 오류:\n{e}", halign='center', size_hint=(1, 1))
 
 if __name__ == '__main__':
     Builder.load_file('src/ui/tracker_layout.kv')
