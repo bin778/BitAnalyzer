@@ -4,16 +4,17 @@
 
 ---
 
-## 📸 스크린샷  
+## 📸 스크린샷
+
 <img width="400" height="200" alt="image" src="https://github.com/user-attachments/assets/6c359a94-76c9-47d6-87df-ab1d169a8f35" />
 
 ---
 
 ## ✨ 주요 기능
 
-- Binance 거래소의 **BTC/USDT 현재 시세 표시**  
-- **'Refresh' 버튼**을 통한 수동 새로고침  
-- **`.kv` 파일**을 사용한 선언적 UI 디자인 적용  
+- 여러 비트코인 거래소의 **BTC/USDT 현재 시세 표시**
+- **'Refresh' 버튼**을 통한 수동 새로고침
+- **`.kv` 파일**을 사용한 선언적 UI 디자인 적용
 
 ---
 
@@ -29,7 +30,7 @@
 #### API
 
 <p>
-  <img src="https://img.shields.io/badge/binance-F0B90B?style=for-the-badge&logo=binance&logoColor=white">
+  <img src="https://img.shields.io/badge/bitcoin-F7931A?style=for-the-badge&logo=bitcoin&logoColor=white">
 </p>
 
 #### Tools
@@ -63,8 +64,9 @@ BitAnalyzer/
 ## 🚀 프로젝트 실행
 
 ### 사전 요구 사항
-- Python **3.8 이상**  
-- Binance 계정 및 **API Key (읽기 전용 권한)**  
+
+- Python **3.8 이상**
+- Binance 계정 및 **API Key (읽기 전용 권한)**
 
 ### 설치
 
@@ -79,17 +81,20 @@ source .venv/bin/activate  # macOS/Linux
 # .\.venv\Scripts\activate  # Windows
 
 # 필수 라이브러리 설치
-pip install kivy python-binance python-dotenv
+pip install kivy ccxt python-dotenv
 ```
 
 ### 환경 설정
+
 - `.env` 파일을 생성하고 본인의 Binance API 키를 입력:
+
 ```ini
 BINANCE_API_KEY="YOUR_API_KEY_HERE"
 BINANCE_API_SECRET="YOUR_API_SECRET_HERE"
 ```
 
 ### 실행 방법
+
 ```bash
 python src/main.py
 ```
