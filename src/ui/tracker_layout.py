@@ -2,6 +2,7 @@ import threading
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
 
+# TODO: 실시간 시세 업데이트 기능 추가(Multi-Thread)
 class PriceTrackerLayout(BoxLayout):
     def __init__(self, price_service, **kwargs):
         super().__init__(**kwargs)
