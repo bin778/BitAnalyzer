@@ -6,13 +6,13 @@
 
 ## 📸 스크린샷
 
-<img width="400" height="200" alt="image" src="https://github.com/user-attachments/assets/6c359a94-76c9-47d6-87df-ab1d169a8f35" />
+<img width="450" height="333" alt="image" src="https://github.com/user-attachments/assets/6043b202-7fe6-41e6-89f4-25b99a25c1da" />
 
 ---
 
 ## ✨ 주요 기능
 
-- 여러 비트코인 거래소(Binance, UPBIT, ByBit)의 **BTC/USDT, BTC/KRW 현재 시세 표시**
+- 여러 비트코인 거래소의 **BTC/USDT, BTC/KRW 현재 시세 표시**
 - **'Refresh' 버튼**을 통한 수동 새로고침
 - **`.kv` 파일**을 사용한 선언적 UI 디자인 적용
 
