@@ -8,7 +8,7 @@ from ui.tracker_layout import PriceTrackerLayout
 
 class PriceTrackerApp(App):
     def build(self):
-        Window.size = (400, 350)
+        Window.size = (900, 500)
         
         try:
             price_service = PriceService()
@@ -20,6 +20,7 @@ class PriceTrackerApp(App):
             return Label(text=f"설정 오류:\n{e}", halign='center', size_hint=(1, 1))
 
 if __name__ == '__main__':
+    Builder.load_file('src/ui/order_book_widget.kv')
     Builder.load_file('src/ui/tracker_layout.kv')
     
     PriceTrackerApp().run()

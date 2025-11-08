@@ -1,52 +1,41 @@
 import threading
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
+from .order_book_widget import OrderBookWidget
 
 # TODO: 실시간 시세 업데이트 기능 추가(Multi-Thread)
 class PriceTrackerLayout(BoxLayout):
     def __init__(self, price_service, **kwargs):
         super().__init__(**kwargs)
         self.price_service = price_service
-        Clock.schedule_once(self.start_fetch_thread, 0)
+        Clock.schedule_once(self.start_fetch_thread, 0.5)
 
     def start_fetch_thread(self, instance=None):
-        self.ids.binance_label.text = 'Binance: Loading...'
-        self.ids.upbit_label.text = 'Upbit: Loading...'
-        self.ids.bybit_label.text = 'Bybit: Loading...'
+        self.ids.binance_ob.set_loading_state()
+        self.ids.upbit_ob.set_loading_state()
+        self.ids.bybit_ob.set_loading_state()
         
-        threading.Thread(target=self.fetch_price_data, daemon=True).start()
+        threading.Thread(target=self.fetch_data, daemon=True).start()
 
-    def fetch_price_data(self):
+    def fetch_data(self):
         try:
-            all_prices = self.price_service.get_all_btc_prices()
-            Clock.schedule_once(lambda dt: self.update_ui(all_prices))
+            all_data = self.price_service.get_all_btc_order_books(limit=5)
+            Clock.schedule_once(lambda dt: self.update_ui(all_data))
         except Exception as e:
             print(f"전체 fetch 에러: {e}")
             Clock.schedule_once(lambda dt: self.update_ui_error())
 
-    def update_ui(self, all_prices):
-        bin_data = all_prices.get('binance')
-        if bin_data and 'price' in bin_data:
-            price = bin_data['price']
-            self.ids.binance_label.text = f"Binance (BTC/USDT): ${price:,.2f}"
-        else:
-            self.ids.binance_label.text = "Binance: ERROR"
+    def update_ui(self, all_data):
+        bin_data = all_data.get('binance')
+        self.ids.binance_ob.update_data('Binance', bin_data)
 
-        upbit_data = all_prices.get('upbit')
-        if upbit_data and 'price' in upbit_data:
-            price = upbit_data['price']
-            self.ids.upbit_label.text = f"Upbit (BTC/KRW): ₩{price:,.0f}"
-        else:
-            self.ids.upbit_label.text = "Upbit: ERROR"
+        upbit_data = all_data.get('upbit')
+        self.ids.upbit_ob.update_data('Upbit', upbit_data)
 
-        bybit_data = all_prices.get('bybit')
-        if bybit_data and 'price' in bybit_data:
-            price = bybit_data['price']
-            self.ids.bybit_label.text = f"Bybit (BTC/USDT): ${price:,.2f}"
-        else:
-            self.ids.bybit_label.text = "Bybit: ERROR"
+        bybit_data = all_data.get('bybit')
+        self.ids.bybit_ob.update_data('Bybit', bybit_data)
 
     def update_ui_error(self):
-        self.ids.binance_label.text = "Binance: ERROR!"
-        self.ids.upbit_label.text = "Upbit: ERROR!"
-        self.ids.bybit_label.text = "Bybit: ERROR!"
+        self.ids.binance_ob.set_error_state()
+        self.ids.upbit_ob.set_error_state()
+        self.ids.bybit_ob.set_error_state()

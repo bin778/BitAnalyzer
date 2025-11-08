@@ -1,0 +1,48 @@
+<OrderBookWidget>:
+    orientation: 'vertical'
+    spacing: 5
+    padding: 5
+    canvas.before:
+        Color:
+            rgba: (0.1, 0.1, 0.1, 1)
+        RoundedRectangle:
+            pos: self.pos
+            size: self.size
+            radius: [5]
+
+    Label:
+        id: title_label
+        text: "Exchange"
+        font_size: '18sp'
+        bold: True
+        size_hint_y: 0.15
+
+    Label:
+        text: "Asks (Sell)"
+        size_hint_y: 0.1
+        color: (1, 0.4, 0.4, 1)
+        font_size: '14sp'
+        
+    ScrollView:
+        size_hint_y: 0.35
+        GridLayout:
+            id: asks_layout
+            cols: 2
+            spacing: 2
+            size_hint_y: None
+            height: self.minimum_height
+
+    Label:
+        text: "Bids (Buy)"
+        size_hint_y: 0.1
+        color: (0.4, 1, 0.4, 1)
+        font_size: '14sp'
+
+    ScrollView:
+        size_hint_y: 0.35
+        GridLayout:
+            id: bids_layout
+            cols: 2
+            spacing: 2
+            size_hint_y: None
+            height: self.minimum_height
