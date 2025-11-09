@@ -9,22 +9,25 @@
             pos: self.pos
             size: self.size
             radius: [5]
-
     Label:
         id: title_label
         text: "Exchange"
         font_size: '18sp'
         bold: True
         size_hint_y: 0.15
-
+    Label:
+        id: trend_label
+        text: "Trend: -"
+        font_size: '14sp'
+        size_hint_y: 0.1
+        color: (0.8, 0.8, 0.8, 1)
     Label:
         text: "Asks (Sell)"
-        size_hint_y: 0.1
+        size_hint_y: 0.08
         color: (1, 0.4, 0.4, 1)
         font_size: '14sp'
-        
     ScrollView:
-        size_hint_y: 0.35
+        size_hint_y: 0.3
         GridLayout:
             id: asks_layout
             cols: 2
@@ -33,15 +36,13 @@
             height: self.minimum_height
             row_default_height: '20dp'
             row_force_default: True
-
     Label:
         text: "Bids (Buy)"
-        size_hint_y: 0.1
+        size_hint_y: 0.08
         color: (0.4, 1, 0.4, 1)
         font_size: '14sp'
-
     ScrollView:
-        size_hint_y: 0.35
+        size_hint_y: 0.3
         GridLayout:
             id: bids_layout
             cols: 2
@@ -50,3 +51,5 @@
             height: self.minimum_height
             row_default_height: '20dp'
             row_force_default: True
+
+# (총합 0.15 + 0.1 + 0.08 + 0.3 + 0.08 + 0.3 = 1.01 -> Kivy가 유연하게 처리)

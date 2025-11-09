@@ -79,3 +79,11 @@ class PriceService:
             order_books['bybit'] = {'error': str(e)}
             
         return order_books
+    
+    def get_usdt_krw_price(self):
+        try:
+            ticker = self.upbit_client.fetch_ticker('USDT/KRW')
+            return ticker['last']
+        except Exception as e:
+            print(f"Upbit USDT/KRW Ticker API 에러: {e}")
+            return None

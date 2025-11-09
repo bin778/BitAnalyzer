@@ -8,14 +8,27 @@
     BoxLayout:
         orientation: 'horizontal'
         spacing: 10
-        size_hint_y: 0.9
-
+        size_hint_y: 0.8
+        
         OrderBookWidget:
             id: binance_ob
         OrderBookWidget:
             id: upbit_ob
         OrderBookWidget:
             id: bybit_ob
+
+    BoxLayout:
+        orientation: 'horizontal'
+        size_hint_y: 0.1
+        padding: (0, 5, 0, 5)
+        
+        Label:
+            id: analysis_label
+            text: "K-Premium: Calculating..."
+            font_size: '18sp'
+            halign: 'center'
+            valign: 'middle'
+            color: (0.8, 0.8, 0.8, 1)
 
     Button:
         text: 'Refresh'
