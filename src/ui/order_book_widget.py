@@ -1,7 +1,6 @@
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
 
-# TODO: 글자 겹침 문제 해결하기
 class OrderBookWidget(BoxLayout):
     def set_loading_state(self):
         self.ids.title_label.text = "Loading..."
