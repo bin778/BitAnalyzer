@@ -6,7 +6,7 @@
 
 ## 📸 스크린샷
 
-<img width="450" height="333" alt="image" src="https://github.com/user-attachments/assets/6043b202-7fe6-41e6-89f4-25b99a25c1da" />
+<img width="900" height="550" alt="image" src="https://github.com/user-attachments/assets/f57c6057-1a0e-42c0-9a70-a2f8988c4931" />
 
 ---
 
