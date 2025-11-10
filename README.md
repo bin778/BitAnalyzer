@@ -1,6 +1,6 @@
 # 🪙 BitAnalyzer
 
-> Kivy와 Python을 사용한 실시간 암호화폐 시세 비교 프로그램. 현재는 Binance, UPBIT, ByBit 시세세 비교하는 프로그램 구현.
+> Kivy와 Python을 사용한 실시간 암호화폐 시세 비교 프로그램. 현재는 Binance, UPBIT, ByBit 시세를 비교하고 앞으로의 추세를 확인하는 프로그램 구현.
 
 ---
 
@@ -12,7 +12,7 @@
 
 ## ✨ 주요 기능
 
-- 여러 비트코인 거래소의 **BTC/USDT, BTC/KRW 현재 시세 표시**
+- 여러 비트코인 거래소의 **BTC/USDT, BTC/KRW 현재 시세 및 앞으로의 추세 표시**
 - **'Refresh' 버튼**을 통한 수동 새로고침
 - **`.kv` 파일**을 사용한 선언적 UI 디자인 적용
 
@@ -46,19 +46,20 @@
 ## 🏗️ 프로젝트 구조
 
 ```Bash
-BitAnalyzer/
 ├── LICENSE
 ├── README.md
-└── src/
-├── init.py
-├── main.py # Kivy 앱 실행 (Entry Point)
-├── services/
-│ ├── init.py
-│ └── price_service.py # API 연동 및 데이터 처리 (비즈니스 로직)
-└── ui/
-├── init.py
-├── tracker_layout.kv # UI 레이아웃 및 디자인 (Presentation)
-└── tracker_layout.py # UI 이벤트 및 상태 관리 (Behavior)
+└── src
+    ├── __init__.py
+    ├── main.py
+    ├── services
+    │   ├── __init__.py
+    │   └── price_service.py
+    └── ui
+        ├── __init__.py
+        ├── order_book_widget.kv
+        ├── order_book_widget.py
+        ├── tracker_layout.kv
+        └── tracker_layout.py
 ```
 
 ## 🚀 프로젝트 실행

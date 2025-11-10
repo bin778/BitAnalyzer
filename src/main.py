@@ -8,18 +8,24 @@ from ui.tracker_layout import PriceTrackerLayout
 
 class PriceTrackerApp(App):
     def build(self):
-        Window.size = (400, 350)
+        Window.size = (900, 550)
         
         try:
             price_service = PriceService()
-            layout = PriceTrackerLayout(price_service=price_service)
-            return layout
+            self.layout = PriceTrackerLayout(price_service=price_service)
+            return self.layout
         
         except ValueError as e:
-            print(f"앱 시작 에러: {e}")
-            return Label(text=f"설정 오류:\n{e}", halign='center', size_hint=(1, 1))
+            print(f"Application Starting Error: {e}")
+            return Label(text=f"Setting Error:\n{e}", halign='center', size_hint=(1, 1))
+
+    def on_stop(self):
+        print("Application Exit... Stop Thread.")
+        if hasattr(self, 'layout'):
+            self.layout.running = False 
 
 if __name__ == '__main__':
+    Builder.load_file('src/ui/order_book_widget.kv')
     Builder.load_file('src/ui/tracker_layout.kv')
     
     PriceTrackerApp().run()
