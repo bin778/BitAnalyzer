@@ -1,14 +1,51 @@
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.label import Label
+from kivy.clock import Clock
 from services.analysis_service import analyze_order_book_trend
 
 class OrderBookWidget(BoxLayout):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        
+        self.ask_labels = []
+        self.bid_labels = []
+
+        for _ in range(5):
+            self.ask_labels.append({
+                'price': Label(text='-', color=(1, 0.4, 0.4, 1), size_hint_x=0.6),
+                'qty': Label(text='-', color=(1, 1, 1, 0.7), size_hint_x=0.4, font_size='12sp')
+            })
+            self.bid_labels.append({
+                'price': Label(text='-', color=(0.4, 1, 0.4, 1), size_hint_x=0.6),
+                'qty': Label(text='-', color=(1, 1, 1, 0.7), size_hint_x=0.4, font_size='12sp')
+            })
+        
+        Clock.schedule_once(self._populate_layouts)
+
+    def _populate_layouts(self, dt):
+        try:
+            for i in range(5):
+                ask = self.ask_labels[i]
+                self.ids.asks_layout.add_widget(ask['price'])
+                self.ids.asks_layout.add_widget(ask['qty'])
+                
+                bid = self.bid_labels[i]
+                self.ids.bids_layout.add_widget(bid['price'])
+                self.ids.bids_layout.add_widget(bid['qty'])
+        except Exception as e:
+            print(f"Error populating layouts: {e}. Retrying...")
+            Clock.schedule_once(self._populate_layouts, 0.1)
+
     def _set_ob_labels(self, text, qty_text=""):
+        if not self.ask_labels:
+            return
+            
+        qty_text = qty_text or text
         for i in range(5):
-            self.ids[f'ask_price_{i}'].text = text
-            self.ids[f'ask_qty_{i}'].text = qty_text
-            self.ids[f'bid_price_{i}'].text = text
-            self.ids[f'bid_qty_{i}'].text = qty_text
+            self.ask_labels[i]['price'].text = text
+            self.ask_labels[i]['qty'].text = qty_text
+            self.bid_labels[i]['price'].text = text
+            self.bid_labels[i]['qty'].text = qty_text
 
     def set_loading_state(self):
         self.ids.title_label.text = "Loading..."
@@ -23,7 +60,10 @@ class OrderBookWidget(BoxLayout):
         self._set_ob_labels("Error", "Error")
 
     def update_data(self, exchange_name, data):
-        
+        if not self.ask_labels or not self.ids.asks_layout.children:
+            self.set_loading_state()
+            return
+
         if not data or 'error' in data:
             self.set_error_state()
             if data and 'error' in data:
@@ -47,19 +87,19 @@ class OrderBookWidget(BoxLayout):
                 price, qty = asks[-(i+1)] 
                 price_str = f"₩{price:,.0f}" if is_krw else f"${price:,.2f}"
                 qty_str = f"{qty:.4f}"
-                self.ids[f'ask_price_{i}'].text = price_str
-                self.ids[f'ask_qty_{i}'].text = qty_str
+                self.ask_labels[i]['price'].text = price_str
+                self.ask_labels[i]['qty'].text = qty_str
             else:
-                self.ids[f'ask_price_{i}'].text = '-'
-                self.ids[f'ask_qty_{i}'].text = '-'
+                self.ask_labels[i]['price'].text = '-'
+                self.ask_labels[i]['qty'].text = '-'
 
         for i in range(5):
             if i < len(bids):
                 price, qty = bids[i]
                 price_str = f"₩{price:,.0f}" if is_krw else f"${price:,.2f}"
                 qty_str = f"{qty:.4f}"
-                self.ids[f'bid_price_{i}'].text = price_str
-                self.ids[f'bid_qty_{i}'].text = qty_str
+                self.bid_labels[i]['price'].text = price_str
+                self.bid_labels[i]['qty'].text = qty_str
             else:
-                self.ids[f'bid_price_{i}'].text = '-'
-                self.ids[f'bid_qty_{i}'].text = '-'
+                self.bid_labels[i]['price'].text = '-'
+                self.bid_labels[i]['qty'].text = '-'
