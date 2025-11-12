@@ -9,6 +9,7 @@
             pos: self.pos
             size: self.size
             radius: [5]
+
     Label:
         id: title_label
         text: "Exchange"
@@ -22,34 +23,152 @@
         size_hint_y: 0.1
         color: (0.8, 0.8, 0.8, 1)
     Label:
-        text: "Asks (Sell)"
+        text: "Asks (Buy)"
         size_hint_y: 0.08
         color: (1, 0.4, 0.4, 1)
         font_size: '14sp'
+        
     ScrollView:
         size_hint_y: 0.3
         GridLayout:
-            id: asks_layout
             cols: 2
             spacing: 2
             size_hint_y: None
             height: self.minimum_height
             row_default_height: '20dp'
             row_force_default: True
+            
+            Label:
+                id: ask_price_0
+                text: '-'
+                color: (1, 0.4, 0.4, 1)
+                size_hint_x: 0.6
+            Label:
+                id: ask_qty_0
+                text: '-'
+                color: (1, 1, 1, 0.7)
+                size_hint_x: 0.4
+                font_size: '12sp'
+            
+            Label:
+                id: ask_price_1
+                text: '-'
+                color: (1, 0.4, 0.4, 1)
+                size_hint_x: 0.6
+            Label:
+                id: ask_qty_1
+                text: '-'
+                color: (1, 1, 1, 0.7)
+                size_hint_x: 0.4
+                font_size: '12sp'
+            
+            Label:
+                id: ask_price_2
+                text: '-'
+                color: (1, 0.4, 0.4, 1)
+                size_hint_x: 0.6
+            Label:
+                id: ask_qty_2
+                text: '-'
+                color: (1, 1, 1, 0.7)
+                size_hint_x: 0.4
+                font_size: '12sp'
+            
+            Label:
+                id: ask_price_3
+                text: '-'
+                color: (1, 0.4, 0.4, 1)
+                size_hint_x: 0.6
+            Label:
+                id: ask_qty_3
+                text: '-'
+                color: (1, 1, 1, 0.7)
+                size_hint_x: 0.4
+                font_size: '12sp'
+            
+            Label:
+                id: ask_price_4
+                text: '-'
+                color: (1, 0.4, 0.4, 1)
+                size_hint_x: 0.6
+            Label:
+                id: ask_qty_4
+                text: '-'
+                color: (1, 1, 1, 0.7)
+                size_hint_x: 0.4
+                font_size: '12sp'
     Label:
-        text: "Bids (Buy)"
+        text: "Bids (Sell)"
         size_hint_y: 0.08
         color: (0.4, 1, 0.4, 1)
         font_size: '14sp'
+
     ScrollView:
         size_hint_y: 0.3
         GridLayout:
-            id: bids_layout
             cols: 2
             spacing: 2
             size_hint_y: None
             height: self.minimum_height
             row_default_height: '20dp'
             row_force_default: True
-
-# (총합 0.15 + 0.1 + 0.08 + 0.3 + 0.08 + 0.3 = 1.01 -> Kivy가 유연하게 처리)
+            
+            Label:
+                id: bid_price_0
+                text: '-'
+                color: (0.4, 1, 0.4, 1)
+                size_hint_x: 0.6
+            Label:
+                id: bid_qty_0
+                text: '-'
+                color: (1, 1, 1, 0.7)
+                size_hint_x: 0.4
+                font_size: '12sp'
+            
+            Label:
+                id: bid_price_1
+                text: '-'
+                color: (0.4, 1, 0.4, 1)
+                size_hint_x: 0.6
+            Label:
+                id: bid_qty_1
+                text: '-'
+                color: (1, 1, 1, 0.7)
+                size_hint_x: 0.4
+                font_size: '12sp'
+            
+            Label:
+                id: bid_price_2
+                text: '-'
+                color: (0.4, 1, 0.4, 1)
+                size_hint_x: 0.6
+            Label:
+                id: bid_qty_2
+                text: '-'
+                color: (1, 1, 1, 0.7)
+                size_hint_x: 0.4
+                font_size: '12sp'
+            
+            Label:
+                id: bid_price_3
+                text: '-'
+                color: (0.4, 1, 0.4, 1)
+                size_hint_x: 0.6
+            Label:
+                id: bid_qty_3
+                text: '-'
+                color: (1, 1, 1, 0.7)
+                size_hint_x: 0.4
+                font_size: '12sp'
+            
+            Label:
+                id: bid_price_4
+                text: '-'
+                color: (0.4, 1, 0.4, 1)
+                size_hint_x: 0.6
+            Label:
+                id: bid_qty_4
+                text: '-'
+                color: (1, 1, 1, 0.7)
+                size_hint_x: 0.4
+                font_size: '12sp'
