@@ -49,12 +49,16 @@ class OrderBookWidget(BoxLayout):
 
     def set_loading_state(self):
         self.ids.title_label.text = "Loading..."
+        self.ids.last_price_label.text = "Last: Loading..."
+        self.ids.last_price_label.color = (0.8, 0.8, 0.8, 1)
         self.ids.trend_label.text = "Trend: Calculating..."
         self.ids.trend_label.color = (0.8, 0.8, 0.8, 1)
         self._set_ob_labels("Loading...")
 
     def set_error_state(self):
         self.ids.title_label.text = "ERROR"
+        self.ids.last_price_label.text = "Last: Error"
+        self.ids.last_price_label.color = (1, 0.3, 0.3, 1)
         self.ids.trend_label.text = "Trend: Error"
         self.ids.trend_label.color = (1, 0.3, 0.3, 1)
         self._set_ob_labels("Error", "Error")
@@ -63,16 +67,21 @@ class OrderBookWidget(BoxLayout):
         if not self.ask_labels or not self.ids.asks_layout.children:
             self.set_loading_state()
             return
+            
+        ob_data = data.get('ob')
+        ticker_data = data.get('ticker')
 
-        if not data or 'error' in data:
+        if not ob_data or 'error' in ob_data or not ticker_data or 'error' in ticker_data:
             self.set_error_state()
-            if data and 'error' in data:
-                print(f"{exchange_name} Error: {data['error']}")
+            if ob_data and 'error' in ob_data:
+                print(f"{exchange_name} OB Error: {ob_data['error']}")
+            if ticker_data and 'error' in ticker_data:
+                print(f"{exchange_name} Ticker Error: {ticker_data['error']}")
             return
         
-        symbol = data.get('symbol', 'N/A')
-        bids = data.get('bids', [])
-        asks = data.get('asks', [])
+        symbol = ob_data.get('symbol', 'N/A')
+        bids = ob_data.get('bids', [])
+        asks = ob_data.get('asks', [])
         
         self.ids.title_label.text = f"{exchange_name} ({symbol})"
         
@@ -81,6 +90,23 @@ class OrderBookWidget(BoxLayout):
         self.ids.trend_label.color = trend_result['color']
 
         is_krw = 'KRW' in symbol
+        
+        last_price = ticker_data.get('last')
+        change_pct = ticker_data.get('change_pct')
+
+        if last_price is not None:
+            price_str = f"₩{last_price:,.0f}" if is_krw else f"${last_price:,.2f}"
+            self.ids.last_price_label.text = f"Last: {price_str}"
+            
+            if change_pct is not None:
+                color = (0.4, 1, 0.4, 1) if change_pct > 0 else (1, 0.4, 0.4, 1) if change_pct < 0 else (1,1,1,1)
+                self.ids.last_price_label.color = color
+                self.ids.last_price_label.text += f" ({change_pct:+.2f}%)"
+            else:
+                self.ids.last_price_label.color = (1, 1, 1, 1)
+        else:
+            self.ids.last_price_label.text = "Last: N/A"
+            self.ids.last_price_label.color = (0.8, 0.8, 0.8, 1)
 
         for i in range(5):
             if i < len(asks):

@@ -16,6 +16,15 @@
         font_size: '18sp'
         bold: True
         size_hint_y: 0.15
+
+    Label:
+        id: last_price_label
+        text: "Last: -"
+        font_size: '16sp'
+        bold: True
+        size_hint_y: 0.12
+        color: (1, 1, 1, 1)
+
     Label:
         id: trend_label
         text: "Trend: -"
@@ -30,7 +39,7 @@
         font_size: '14sp'
         
     ScrollView:
-        size_hint_y: 0.3
+        size_hint_y: 0.235
         GridLayout:
             id: asks_layout
             cols: 2
@@ -47,7 +56,7 @@
         font_size: '14sp'
 
     ScrollView:
-        size_hint_y: 0.3
+        size_hint_y: 0.235
         GridLayout:
             id: bids_layout
             cols: 2
