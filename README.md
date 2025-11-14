@@ -6,14 +6,14 @@
 
 ## 📸 스크린샷
 
-<img width="900" height="550" alt="image" src="https://github.com/user-attachments/assets/f57c6057-1a0e-42c0-9a70-a2f8988c4931" />
+<img width="900" height="600" src="https://github.com/user-attachments/assets/5a504ab5-9319-4ee3-b52b-0bfc739fca05" />
 
 ---
 
 ## ✨ 주요 기능
 
-- 여러 비트코인 거래소의 **BTC/USDT, BTC/KRW 현재 시세 및 앞으로의 추세 표시**
-- **'Refresh' 버튼**을 통한 수동 새로고침
+- 여러 비트코인 거래소의 **BTC/USDT, BTC/KRW 현재 시세 및 호가의 경향성 표시**
+- 5초마다 자동으로 **새로고침(Refresh)** 기능
 - **`.kv` 파일**을 사용한 선언적 UI 디자인 적용
 
 ---
