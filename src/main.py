@@ -8,7 +8,7 @@ from ui.tracker_layout import PriceTrackerLayout
 
 class PriceTrackerApp(App):
     def build(self):
-        Window.size = (900, 550)
+        Window.size = (900, 600)
         
         try:
             price_service = PriceService()

@@ -8,7 +8,7 @@
     BoxLayout:
         orientation: 'horizontal'
         spacing: 10
-        size_hint_y: 0.8
+        size_hint_y: 0.85
         
         OrderBookWidget:
             id: binance_ob
@@ -18,9 +18,10 @@
             id: bybit_ob
 
     BoxLayout:
-        orientation: 'horizontal'
-        size_hint_y: 0.1
+        orientation: 'vertical'
+        size_hint_y: 0.15
         padding: (0, 5, 0, 5)
+        spacing: 2
         
         Label:
             id: analysis_label
@@ -29,3 +30,15 @@
             halign: 'center'
             valign: 'middle'
             color: (0.8, 0.8, 0.8, 1)
+            size_hint_y: None
+            height: self.texture_size[1] + dp(5)
+
+        Label:
+            id: timestamp_label
+            text: "Last Updated: --:--:--"
+            font_size: '12sp'
+            halign: 'center'
+            valign: 'middle'
+            color: (0.7, 0.7, 0.7, 1)
+            size_hint_y: None
+            height: self.texture_size[1]
