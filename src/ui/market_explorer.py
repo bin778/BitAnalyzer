@@ -28,6 +28,7 @@ class MarketItemRow(RecycleDataViewBehavior, BoxLayout):
             return True
         return super().on_touch_down(touch)
 
+# TODO: 같은 시세끼리 비교하도록 수정?(예를 들어, 비교할 때 BTC/USD, KRW, Ethereum, Tether 중 2개 이상이 섞이면 안된다??)
 class MarketExplorer(BoxLayout):
     raw_market_data = ListProperty([])
     selected_symbols = set()
@@ -64,6 +65,7 @@ class MarketExplorer(BoxLayout):
         self.ids.rv.data = filtered_data
         self.update_selection_count()
 
+    # TODO: 3개까지 선택되도록 수정해야 함 (3개가 꽉차면 선택 못하게) (임시 편편)
     def toggle_selection(self, symbol, value):
         if value:
             self.selected_symbols.add(symbol)
@@ -72,14 +74,10 @@ class MarketExplorer(BoxLayout):
         
         if len(self.selected_symbols) > 3:
             self.selected_symbols.discard(symbol)
-            for i, item in enumerate(self.ids.rv.data):
-                if item['symbol'] == symbol:
-                    self.ids.rv.refresh_from_data(indices=[i])
-                    break
+            self.ids.rv.refresh_from_data()
         
         self.update_selection_count()
 
-    # TODO: 4개 이상 선택할 때 예외 처리 필요할 것!
     def update_selection_count(self):
         count = len(self.selected_symbols)
         self.ids.analyze_btn.text = f"Analyze Selected ({count}/3)"
