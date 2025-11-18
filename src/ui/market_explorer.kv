@@ -1,0 +1,96 @@
+<MarketItemRow>:
+        orientation: 'horizontal'
+    size_hint_y: None
+    height: '40dp'
+    padding: 10
+    spacing: 10
+    canvas.before:
+        Color:
+            rgba: (0.15, 0.15, 0.15, 1) if self.selected else (0.1, 0.1, 0.1, 1)
+        Rectangle:
+            pos: self.pos
+            size: self.size
+
+    Label:
+        text: root.symbol
+        size_hint_x: 0.4
+        halign: 'left'
+        valign: 'middle'
+        text_size: self.size
+        color: (1, 1, 1, 1)
+    
+    Label:
+        text: root.base_coin
+        size_hint_x: 0.3
+        color: (0.7, 0.7, 0.7, 1)
+
+    Label:
+        text: root.quote_currency
+        size_hint_x: 0.3
+        color: (0.4, 0.8, 1, 1) if root.quote_currency in ['USDT', 'KRW'] else (0.6, 0.6, 0.6, 1)
+
+<MarketExplorer>:
+    orientation: 'vertical'
+    padding: 10
+    spacing: 10
+
+    BoxLayout:
+        orientation: 'horizontal'
+        size_hint_y: None
+        height: '50dp'
+        spacing: 10
+
+        Spinner:
+            id: exchange_spinner
+            text: 'Binance'
+            values: ['Binance', 'Upbit', 'Bybit']
+            size_hint_x: 0.3
+            on_text: root.load_markets(self.text)
+
+        TextInput:
+            id: search_input
+            hint_text: 'Search Coin (e.g. BTC)'
+            multiline: False
+            size_hint_x: 0.4
+            on_text: root.filter_list()
+
+        Spinner:
+            id: quote_spinner
+            text: 'All'
+            values: ['All', 'USDT', 'KRW', 'BTC', 'ETH']
+            size_hint_x: 0.3
+            on_text: root.filter_list()
+
+    BoxLayout:
+        size_hint_y: None
+        height: '30dp'
+        padding: 10
+        spacing: 10
+        Label:
+            text: "Symbol"
+            bold: True
+            size_hint_x: 0.4
+            halign: 'left'
+            text_size: self.size
+        Label:
+            text: "Base (Coin)"
+            bold: True
+            size_hint_x: 0.3
+        Label:
+            text: "Quote (Unit)"
+            bold: True
+            size_hint_x: 0.3
+
+    RecycleView:
+        id: rv
+        viewclass: 'MarketItemRow'
+        scroll_type: ['bars', 'content']
+        bar_width: 10
+        
+        RecycleBoxLayout:
+            default_size: None, dp(40)
+            default_size_hint: 1, None
+            size_hint_y: None
+            height: self.minimum_height
+            orientation: 'vertical'
+            spacing: 2
