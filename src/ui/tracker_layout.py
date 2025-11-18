@@ -1,6 +1,7 @@
 import threading, time
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
+from kivy.app import App
 from services.analysis_service import calculate_k_premium
 from datetime import datetime
 
@@ -8,30 +9,72 @@ class PriceTrackerLayout(BoxLayout):
     def __init__(self, price_service, **kwargs):
         super().__init__(**kwargs)
         self.price_service = price_service
-        self.running = True 
+        self.running = False 
+        self.active_targets = []
+        
+        self.widget_map = {
+            'slot_0': self.ids.slot_0,
+            'slot_1': self.ids.slot_1,
+            'slot_2': self.ids.slot_2
+        }
+        
+        self.k_premium_data = {'upbit': None, 'binance': None}
+
         threading.Thread(target=self.fetch_data_loop, daemon=True).start()
 
-    def start_fetch_thread(self, instance=None):
-        threading.Thread(target=self.fetch_data_once, daemon=True).start()
+    def update_watching_list(self, exchange_name, selected_items):
+        """ MarketExplorer에서 선택된 항목으로 active_targets을 교체합니다. """
+        self.running = False # 기존 루프 임시 중지
+        time.sleep(0.05) # 스레드가 멈출 시간 대기
+        
+        self.active_targets = []
+        keys = ['slot_0', 'slot_1', 'slot_2']
+        
+        for i, item in enumerate(selected_items[:3]):
+            self.active_targets.append({
+                'key': keys[i],
+                'exchange': exchange_name,
+                'symbol': item['symbol']
+            })
+            
+        print(f"New targets: {self.active_targets}")
+        
+        for key, widget in self.widget_map.items():
+            if key not in [t['key'] for t in self.active_targets]:
+                widget.ids.title_label.text = "Empty"
+                widget.ids.last_price_label.text = "Last: -"
+                widget.ids.last_price_label.color = (1,1,1,1)
+                widget.ids.trend_label.text = "Trend: -"
+                widget._set_ob_labels("-")
+
+        self.running = True
+        self.fetch_data_once()
 
     def fetch_data_loop(self):
-        Clock.schedule_once(lambda dt: self.set_all_loading(), 0.1)
-        
-        while self.running:
-            try:
-                all_data, usdt_krw_price = self.fetch_data_internal_parallel()
-                Clock.schedule_once(lambda dt, d=all_data, p=usdt_krw_price: self.update_ui(d, p))
-                time.sleep(5) 
-            except Exception as e:
-                print(f"fetch_data_loop 에러: {e}")
-                Clock.schedule_once(lambda dt: self.update_ui_error())
-                time.sleep(5)
+        while True: 
+            if self.running:
+                try:
+                    all_data, usdt_krw_price = self.fetch_data_internal_parallel()
+                    Clock.schedule_once(lambda dt, d=all_data, p=usdt_krw_price: self.update_ui(d, p))
+                    time.sleep(5) 
+                except Exception as e:
+                    print(f"fetch_data_loop 에러: {e}")
+                    Clock.schedule_once(lambda dt: self.update_ui_error())
+                    time.sleep(5)
+            else:
+                time.sleep(0.5)
 
     def fetch_data_once(self):
+        if not self.running:
+            return
+        
         self.set_all_loading()
+        threading.Thread(target=self._fetch_and_update_once, daemon=True).start()
+
+    def _fetch_and_update_once(self):
         try:
             all_data, usdt_krw_price = self.fetch_data_internal_parallel()
-            Clock.schedule_once(lambda dt: self.update_ui(all_data, usdt_krw_price))
+            Clock.schedule_once(lambda dt, d=all_data, p=usdt_krw_price: self.update_ui(d, p))
         except Exception as e:
             print(f"fetch_data_once 에러: {e}")
             Clock.schedule_once(lambda dt: self.update_ui_error())
@@ -39,88 +82,87 @@ class PriceTrackerLayout(BoxLayout):
     def fetch_data_internal_parallel(self):
         results = {}
         threads = []
-
-        def fetch_binance_ob():
-            results['binance_ob'] = self.price_service.get_btc_order_book('binance', 'BTC/USDT', limit=5)
-        def fetch_binance_ticker():
-            results['binance_ticker'] = self.price_service.get_ticker('binance', 'BTC/USDT')
         
-        def fetch_upbit_ob():
-            results['upbit_ob'] = self.price_service.get_btc_order_book('upbit', 'BTC/KRW', limit=5)
-        def fetch_upbit_ticker():
-            results['upbit_ticker'] = self.price_service.get_ticker('upbit', 'BTC/KRW')
+        if not self.active_targets:
+            return {}, None
+
+        for target in self.active_targets:
+            key = target['key']
+            ex = target['exchange']
+            sym = target['symbol']
             
-        def fetch_bybit_ob():
-            results['bybit_ob'] = self.price_service.get_btc_order_book('bybit', 'BTC/USDT', limit=5)
-        def fetch_bybit_ticker():
-            results['bybit_ticker'] = self.price_service.get_ticker('bybit', 'BTC/USDT')
+            def fetch_ob(k=key, e=ex, s=sym):
+                results[f"{k}_ob"] = self.price_service.get_btc_order_book(e, s)
+            def fetch_ticker(k=key, e=ex, s=sym):
+                results[f"{k}_ticker"] = self.price_service.get_ticker(e, s)
+            
+            threads.append(threading.Thread(target=fetch_ob, daemon=True))
+            threads.append(threading.Thread(target=fetch_ticker, daemon=True))
 
         def fetch_usdt_krw():
             results['usdt_krw'] = self.price_service.get_usdt_krw_price()
+        threads.append(threading.Thread(target=fetch_usdt_krw, daemon=True))
 
-        threads.append(threading.Thread(target=fetch_binance_ob))
-        threads.append(threading.Thread(target=fetch_binance_ticker))
-        threads.append(threading.Thread(target=fetch_upbit_ob))
-        threads.append(threading.Thread(target=fetch_upbit_ticker))
-        threads.append(threading.Thread(target=fetch_bybit_ob))
-        threads.append(threading.Thread(target=fetch_bybit_ticker))
-        threads.append(threading.Thread(target=fetch_usdt_krw))
+        for t in threads: t.start()
+        for t in threads: t.join()
 
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        all_data = {
-            'binance': {
-                'ob': results.get('binance_ob'),
-                'ticker': results.get('binance_ticker')
-            },
-            'upbit': {
-                'ob': results.get('upbit_ob'),
-                'ticker': results.get('upbit_ticker')
-            },
-            'bybit': {
-                'ob': results.get('bybit_ob'),
-                'ticker': results.get('bybit_ticker')
-            },
-        }
+        all_data = {}
+        for target in self.active_targets:
+            key = target['key']
+            all_data[key] = {
+                'ob': results.get(f"{key}_ob"),
+                'ticker': results.get(f"{key}_ticker")
+            }
+            
         usdt_krw_price = results.get('usdt_krw')
-        
         return all_data, usdt_krw_price
 
     def set_all_loading(self):
-        self.ids.binance_ob.set_loading_state()
-        self.ids.upbit_ob.set_loading_state()
-        self.ids.bybit_ob.set_loading_state()
+        for target in self.active_targets:
+            key = target['key']
+            if key in self.widget_map:
+                self.widget_map[key].set_loading_state()
+        
         self.ids.analysis_label.text = "K-Premium: Calculating..."
         self.ids.analysis_label.color = (0.8, 0.8, 0.8, 1)
         self.ids.timestamp_label.text = "Last Updated: --:--:--"
 
     def update_ui(self, all_data, usdt_krw_price):
-        bin_data = all_data.get('binance')
-        self.ids.binance_ob.update_data('Binance', bin_data)
+        self.k_premium_data = {'upbit': None, 'binance': None}
 
-        upbit_data = all_data.get('upbit')
-        self.ids.upbit_ob.update_data('Upbit', upbit_data)
+        for target in self.active_targets:
+            key = target['key']
+            data = all_data.get(key)
+            widget = self.widget_map.get(key)
+            
+            if widget and data:
+                widget.update_data(target['exchange'].capitalize(), data)
+                
+                if 'KRW' in target['symbol']:
+                    self.k_premium_data['upbit'] = data.get('ob')
+                elif 'USDT' in target['symbol']:
+                    if self.k_premium_data['binance'] is None:
+                        self.k_premium_data['binance'] = data.get('ob')
 
-        bybit_data = all_data.get('bybit')
-        self.ids.bybit_ob.update_data('Bybit', bybit_data)
+        upbit_data = self.k_premium_data['upbit']
+        bin_data = self.k_premium_data['binance']
         
-        premium_result = calculate_k_premium(
-            upbit_data.get('ob'), 
-            bin_data.get('ob'), 
-            usdt_krw_price
-        )
-        self.ids.analysis_label.text = premium_result['text']
-        self.ids.analysis_label.color = premium_result['color']
+        if upbit_data and bin_data:
+            premium_result = calculate_k_premium(upbit_data, bin_data, usdt_krw_price)
+            self.ids.analysis_label.text = premium_result['text']
+            self.ids.analysis_label.color = premium_result['color']
+        else:
+            self.ids.analysis_label.text = "K-Premium (N/A)"
+            self.ids.analysis_label.color = (0.7, 0.7, 0.7, 1)
 
         self.ids.timestamp_label.text = f"Last Updated: {datetime.now().strftime('%H:%M:%S')}"
 
     def update_ui_error(self):
-        self.ids.binance_ob.set_error_state()
-        self.ids.upbit_ob.set_error_state()
-        self.ids.bybit_ob.set_error_state()
+        for target in self.active_targets:
+            key = target['key']
+            if key in self.widget_map:
+                self.widget_map[key].set_error_state()
+                
         self.ids.analysis_label.text = "K-Premium: ERROR!"
         self.ids.analysis_label.color = (1, 0.3, 0.3, 1)
         self.ids.timestamp_label.text = "Last Updated: ERROR"

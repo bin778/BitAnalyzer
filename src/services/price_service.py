@@ -1,6 +1,7 @@
 import os, ccxt
 from dotenv import load_dotenv
 
+# TODO: 환율이 N/A로 원화가 아닌 N/A로 나오는 문제 해결
 class PriceService:
     def __init__(self):
         load_dotenv()

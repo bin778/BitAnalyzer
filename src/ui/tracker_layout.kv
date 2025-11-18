@@ -1,9 +1,17 @@
 #:import OrderBookWidget ui.order_book_widget.OrderBookWidget
+#:import App kivy.app.App
 
 <PriceTrackerLayout>:
     orientation: 'vertical'
     padding: 10
     spacing: 10
+
+    Button:
+        text: "< Back to Search"
+        size_hint_y: None
+        height: '40dp'
+        background_color: (0.3, 0.3, 0.3, 1)
+        on_release: App.get_running_app().switch_to_explorer()
 
     BoxLayout:
         orientation: 'horizontal'
@@ -11,11 +19,11 @@
         size_hint_y: 0.85
         
         OrderBookWidget:
-            id: binance_ob
+            id: slot_0
         OrderBookWidget:
-            id: upbit_ob
+            id: slot_1
         OrderBookWidget:
-            id: bybit_ob
+            id: slot_2
 
     BoxLayout:
         orientation: 'vertical'
