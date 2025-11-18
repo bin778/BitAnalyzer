@@ -23,9 +23,8 @@ class PriceTrackerLayout(BoxLayout):
         threading.Thread(target=self.fetch_data_loop, daemon=True).start()
 
     def update_watching_list(self, exchange_name, selected_items):
-        """ MarketExplorer에서 선택된 항목으로 active_targets을 교체합니다. """
-        self.running = False # 기존 루프 임시 중지
-        time.sleep(0.05) # 스레드가 멈출 시간 대기
+        self.running = False
+        time.sleep(0.05)
         
         self.active_targets = []
         keys = ['slot_0', 'slot_1', 'slot_2']
@@ -148,11 +147,15 @@ class PriceTrackerLayout(BoxLayout):
         bin_data = self.k_premium_data['binance']
         
         if upbit_data and bin_data:
-            premium_result = calculate_k_premium(upbit_data, bin_data, usdt_krw_price)
-            self.ids.analysis_label.text = premium_result['text']
-            self.ids.analysis_label.color = premium_result['color']
+            if not usdt_krw_price:
+                self.ids.analysis_label.text = "K-Premium: (Error: USDT/KRW Rate N/A)"
+                self.ids.analysis_label.color = (1, 0.3, 0.3, 1)
+            else:
+                premium_result = calculate_k_premium(upbit_data, bin_data, usdt_krw_price)
+                self.ids.analysis_label.text = premium_result['text']
+                self.ids.analysis_label.color = premium_result['color']
         else:
-            self.ids.analysis_label.text = "K-Premium (N/A)"
+            self.ids.analysis_label.text = "K-Premium (Select KRW & USDT market)"
             self.ids.analysis_label.color = (0.7, 0.7, 0.7, 1)
 
         self.ids.timestamp_label.text = f"Last Updated: {datetime.now().strftime('%H:%M:%S')}"
