@@ -13,6 +13,10 @@ class ExplorerScreen(Screen):
         self.layout = MarketExplorer(price_service=price_service)
         self.ids['explorer_layout'] = self.layout
         self.add_widget(self.layout)
+    
+    def on_pre_enter(self, *args):
+        if hasattr(self.layout, 'reset_selection'):
+            self.layout.reset_selection()
 
 class TrackerScreen(Screen):
     def __init__(self, price_service, **kwargs):

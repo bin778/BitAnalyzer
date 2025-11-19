@@ -12,10 +12,9 @@
         Rectangle:
             pos: self.pos
             size: self.size
-
+            
     CheckBox:
         id: checkbox
-        active: root.is_checked
         size_hint_x: None
         width: dp(40)
         on_active: root.on_checkbox_active(self, self.active)
