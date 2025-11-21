@@ -46,11 +46,11 @@ def calculate_k_premium(upbit_data, binance_data, usdt_krw_price):
         color = (0.4, 1, 0.4, 1) if premium_pct > 0 else (1, 0.4, 0.4, 1)
         
         text = (
-            f"K-Premium (Upbit/Binance): {premium_pct:+.2f}% "
+            f"Kimchi Premium (Upbit/Binance): {premium_pct:+.2f}% "
             f"(₩{usdt_krw_price:,.0f})"
         )
         return {'text': text, 'color': color}
 
     except Exception as e:
-        print(f"K-Premium Calculation Error: {e}")
-        return {'text': f"K-Premium: Error ({e})", 'color': (1, 0.3, 0.3, 1)}
+        print(f"Kimchi Premium Calculation Error: {e}")
+        return {'text': f"Kimchi Premium: Error ({e})", 'color': (1, 0.3, 0.3, 1)}

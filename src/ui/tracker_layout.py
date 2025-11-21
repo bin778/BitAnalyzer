@@ -122,7 +122,7 @@ class PriceTrackerLayout(BoxLayout):
             if key in self.widget_map:
                 self.widget_map[key].set_loading_state()
         
-        self.ids.analysis_label.text = "K-Premium: Calculating..."
+        self.ids.analysis_label.text = "Kimchi Premium: Calculating..."
         self.ids.analysis_label.color = (0.8, 0.8, 0.8, 1)
         self.ids.timestamp_label.text = "Last Updated: --:--:--"
 
@@ -148,14 +148,14 @@ class PriceTrackerLayout(BoxLayout):
         
         if upbit_data and bin_data:
             if not usdt_krw_price:
-                self.ids.analysis_label.text = "K-Premium: (Error: USDT/KRW Rate N/A)"
+                self.ids.analysis_label.text = "Kimchi Premium: (Error: USDT/KRW Rate N/A)"
                 self.ids.analysis_label.color = (1, 0.3, 0.3, 1)
             else:
                 premium_result = calculate_k_premium(upbit_data, bin_data, usdt_krw_price)
                 self.ids.analysis_label.text = premium_result['text']
                 self.ids.analysis_label.color = premium_result['color']
         else:
-            self.ids.analysis_label.text = "K-Premium (Select KRW & USDT market)"
+            self.ids.analysis_label.text = "Kimchi Premium (Select KRW & USDT market)"
             self.ids.analysis_label.color = (0.7, 0.7, 0.7, 1)
 
         self.ids.timestamp_label.text = f"Last Updated: {datetime.now().strftime('%H:%M:%S')}"
@@ -166,6 +166,6 @@ class PriceTrackerLayout(BoxLayout):
             if key in self.widget_map:
                 self.widget_map[key].set_error_state()
                 
-        self.ids.analysis_label.text = "K-Premium: ERROR!"
+        self.ids.analysis_label.text = "Kimchi Premium: ERROR!"
         self.ids.analysis_label.color = (1, 0.3, 0.3, 1)
         self.ids.timestamp_label.text = "Last Updated: ERROR"
