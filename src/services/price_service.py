@@ -52,3 +52,23 @@ class PriceService:
         except Exception as e:
             print(f"Upbit USDT/KRW Ticker API Error: {e}")
             return None
+    
+    def get_all_markets(self, exchange_name):
+        try:
+            client = getattr(self, f"{exchange_name.lower()}_client")
+            
+            markets = client.load_markets()
+            
+            market_list = []
+            for symbol, info in markets.items():
+                market_list.append({
+                    'symbol': symbol,
+                    'base': info.get('base'),
+                    'quote': info.get('quote'),
+                    'active': info.get('active', True)
+                })
+            return market_list
+            
+        except Exception as e:
+            print(f"{exchange_name} Market Load Error: {e}")
+            return []
