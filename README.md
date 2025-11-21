@@ -7,7 +7,7 @@
 
 ## 📸 스크린샷
 
-<img width="900" height="600" alt="BitAnalyzer Screenshot" src="https://github.com/user-attachments/assets/5a504ab5-9319-4ee3-b52b-0bfc739fca05" />
+<img width="662" height="940" src="https://github.com/user-attachments/assets/985227e0-ae31-4c0f-8320-9f2cc9f424c9" />
 
 ---
 
@@ -23,6 +23,7 @@
 
 - **호가창(Order Book) 분석:** 매수/매도 잔량을 비교하여 현재 시장의 추세(Strong Buy/Sell Pressure)를 텍스트와 색상으로 시각화
 - **김치 프리미엄(K-Premium):** 실시간 환율을 적용하여 해외 거래소 대비 국내 거래소의 가격 차이를 %로 계산
+- **거래 비교 분석:** 기본 비트코인 통일 및 화폐에 따른 제한(법정화폐 뿐만 아니라 BTC/ETH 마켓도 비교 가능)
 
 ### 3. 사용자 친화적 UI
 
@@ -54,7 +55,7 @@
 
 - [x] **기본 기능 구현:** 3개 거래소 시세/호가 비교 및 K-Premium 계산
 - [x] **UI 개선:** 현재가(Ticker) 추가 및 업데이트 타임스탬프 적용
-- [ ] **마켓 확장 및 필터링:** - 메이저/마이너 거래소 전체 리스트 검색 기능
+- [x] **마켓 확장 및 필터링:** - 메이저/마이너 거래소 전체 리스트 검색 기능
   - 기축 통화별(USD, KRW, ETH, USDT) 그룹화 및 비교 기능
 - [ ] **심층 차트 분석:**
   - 네이버 주식 스타일의 기간별(1일, 1주, 3개월 등) 추세선 그래프 시각화
