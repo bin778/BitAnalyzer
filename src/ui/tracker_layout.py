@@ -15,7 +15,9 @@ class PriceTrackerLayout(BoxLayout):
         self.widget_map = {
             'slot_0': self.ids.slot_0,
             'slot_1': self.ids.slot_1,
-            'slot_2': self.ids.slot_2
+            'slot_2': self.ids.slot_2,
+            'slot_3': self.ids.slot_3,
+            'slot_4': self.ids.slot_4
         }
         
         self.k_premium_data = {'upbit': None, 'binance': None}
@@ -27,19 +29,20 @@ class PriceTrackerLayout(BoxLayout):
         time.sleep(0.05)
         
         self.active_targets = []
-        keys = ['slot_0', 'slot_1', 'slot_2']
+        keys = ['slot_0', 'slot_1', 'slot_2', 'slot_3', 'slot_4']
         
-        for i, item in enumerate(selected_items[:3]):
+        for i, item in enumerate(selected_items[:5]):
             self.active_targets.append({
                 'key': keys[i],
                 'exchange': exchange_name,
                 'symbol': item['symbol']
             })
             
-        print(f"New targets: {self.active_targets}")
+        print(f"New targets ({len(self.active_targets)}): {self.active_targets}")
         
+        active_keys = [t['key'] for t in self.active_targets]
         for key, widget in self.widget_map.items():
-            if key not in [t['key'] for t in self.active_targets]:
+            if key not in active_keys:
                 widget.ids.title_label.text = "Empty"
                 widget.ids.last_price_label.text = "Last: -"
                 widget.ids.last_price_label.color = (1,1,1,1)
@@ -155,7 +158,7 @@ class PriceTrackerLayout(BoxLayout):
                 self.ids.analysis_label.text = premium_result['text']
                 self.ids.analysis_label.color = premium_result['color']
         else:
-            self.ids.analysis_label.text = "Kimchi Premium (Select KRW & USDT market)"
+            self.ids.analysis_label.text = "Kimchi Premium (Need KRW & USDT markets)"
             self.ids.analysis_label.color = (0.7, 0.7, 0.7, 1)
 
         self.ids.timestamp_label.text = f"Last Updated: {datetime.now().strftime('%H:%M:%S')}"
@@ -165,7 +168,5 @@ class PriceTrackerLayout(BoxLayout):
             key = target['key']
             if key in self.widget_map:
                 self.widget_map[key].set_error_state()
-                
-        self.ids.analysis_label.text = "Kimchi Premium: ERROR!"
+        self.ids.analysis_label.text = "Data Fetch Error!"
         self.ids.analysis_label.color = (1, 0.3, 0.3, 1)
-        self.ids.timestamp_label.text = "Last Updated: ERROR"

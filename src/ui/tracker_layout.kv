@@ -1,35 +1,60 @@
 #:import OrderBookWidget ui.order_book_widget.OrderBookWidget
 #:import App kivy.app.App
+#:import dp kivy.metrics.dp
 
 <PriceTrackerLayout>:
     orientation: 'vertical'
-    padding: 10
-    spacing: 10
+    padding: dp(10)
+    spacing: dp(10)
 
     Button:
         text: "< Back to Search"
         size_hint_y: None
-        height: '40dp'
+        height: dp(40)
         background_color: (0.3, 0.3, 0.3, 1)
         on_release: App.get_running_app().switch_to_explorer()
 
-    BoxLayout:
-        orientation: 'horizontal'
-        spacing: 10
+    ScrollView:
         size_hint_y: 0.85
-        
-        OrderBookWidget:
-            id: slot_0
-        OrderBookWidget:
-            id: slot_1
-        OrderBookWidget:
-            id: slot_2
+        do_scroll_x: True
+        do_scroll_y: False
+        bar_width: dp(10)
+        scroll_type: ['bars', 'content']
+
+        BoxLayout:
+            id: widgets_container
+            orientation: 'horizontal'
+            size_hint_x: None
+            width: self.minimum_width
+            spacing: dp(10)
+            padding: dp(5)
+            
+            OrderBookWidget:
+                id: slot_0
+                size_hint_x: None
+                width: dp(300)
+            OrderBookWidget:
+                id: slot_1
+                size_hint_x: None
+                width: dp(300)
+            OrderBookWidget:
+                id: slot_2
+                size_hint_x: None
+                width: dp(300)
+            OrderBookWidget:
+                id: slot_3
+                size_hint_x: None
+                width: dp(300)
+            OrderBookWidget:
+                id: slot_4
+                size_hint_x: None
+                width: dp(300)
 
     BoxLayout:
         orientation: 'vertical'
         size_hint_y: 0.15
-        padding: (0, 5, 0, 5)
-        spacing: 2
+        padding: (0, dp(5), 0, dp(5))
+        spacing: dp(2)
         
         Label:
             id: analysis_label

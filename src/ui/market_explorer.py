@@ -20,9 +20,7 @@ class MarketItemRow(RecycleDataViewBehavior, BoxLayout):
         
         if self.explorer:
             real_state = data.get('symbol') in self.explorer.selected_symbols
-            
             self.is_checked = real_state
-            
             if self.ids.checkbox.active != real_state:
                 self.ids.checkbox.active = real_state
         return
@@ -46,7 +44,6 @@ class MarketItemRow(RecycleDataViewBehavior, BoxLayout):
             return True
         return super().on_touch_down(touch)
 
-
 class MarketExplorer(BoxLayout):
     raw_market_data = ListProperty([])
     selected_symbols = set()
@@ -65,7 +62,6 @@ class MarketExplorer(BoxLayout):
     def filter_list(self):
         search_text = self.ids.search_input.text.upper()
         quote_filter = self.ids.quote_spinner.text
-        
         refresh_trigger = time.time()
         
         filtered_data = []
@@ -92,31 +88,26 @@ class MarketExplorer(BoxLayout):
             current_selections = [
                 m for m in self.raw_market_data if m['symbol'] in self.selected_symbols
             ]
-            
             new_market = next((m for m in self.raw_market_data if m['symbol'] == symbol), None)
             
-            # [규칙 1] Base Coin 통일 로직
+            # [규칙 1] Base Coin 통일
             if current_selections and new_market:
                 first_base = current_selections[0]['base']
-                
                 if new_market['base'] != first_base:
-                    print(f"Error: You must select the same base coin ({first_base}).")
                     self.show_warning(f"Only {first_base} pairs allowed!") 
                     return False
 
-            # [규칙 2] Quote Coin 제한 (K-Premium 및 메이저 마켓 허용)
+            # [규칙 2] Quote Coin 확장 허용
             allowed_quotes = ['KRW', 'USDT', 'USD', 'USDC', 'BUSD', 'BTC', 'ETH']
-            
             if new_market and new_market['quote'] not in allowed_quotes:
-                print(f"Error: Quote {new_market['quote']} is not supported for comparison.")
                 self.show_warning("Quote not supported!")
                 return False
 
-            # [규칙 3] 3개 까지 선택
-            if len(self.selected_symbols) >= 3:
-                if symbol not in self.selected_symbols:
-                    self.show_limit_warning() 
-                    return False
+            # [규칙 3] 5개 개수 제한 (확장됨)
+            if len(self.selected_symbols) >= 5:
+                self.show_limit_warning() 
+                return False
+
             self.selected_symbols.add(symbol)
         else:
             self.selected_symbols.discard(symbol)
@@ -125,8 +116,7 @@ class MarketExplorer(BoxLayout):
         return True
 
     def show_limit_warning(self):
-        print("Maximum selection reached (3 items).")
-        self.show_warning("Max 3 Items Allowed!")
+        self.show_warning("Max 5 Items Allowed!")
 
     def show_warning(self, message):
         self.ids.analyze_btn.text = message
@@ -135,28 +125,26 @@ class MarketExplorer(BoxLayout):
 
     def update_selection_count(self):
         count = len(self.selected_symbols)
-        if count >= 3:
+        if count >= 5:
             self.ids.analyze_btn.background_color = (0.2, 0.6, 1, 1)
-            self.ids.analyze_btn.text = f"Analyze Selected ({count}/3)"
+            self.ids.analyze_btn.text = f"Analyze Selected ({count}/5)"
         elif count == 0:
             self.ids.analyze_btn.background_color = (0.5, 0.5, 0.5, 1)
-            self.ids.analyze_btn.text = "Select 1-3 items"
+            self.ids.analyze_btn.text = "Select 1-5 items"
         else:
             self.ids.analyze_btn.background_color = (0.2, 0.6, 1, 1)
-            self.ids.analyze_btn.text = f"Analyze Selected ({count}/3)"
+            self.ids.analyze_btn.text = f"Analyze Selected ({count}/5)"
 
     def reset_selection(self):
         print("Resetting selection (Nuke Strategy)...")
         self.selected_symbols.clear()
-        
         self.ids.rv.data = []
         self.ids.rv.refresh_from_data()
-        
         Clock.schedule_once(lambda dt: self.filter_list(), 0.1)
 
     def dispatch_analysis(self):
         count = len(self.selected_symbols)
-        if 1 <= count <= 3:
+        if 1 <= count <= 5:
             app = App.get_running_app()
             exchange_name = self.ids.exchange_spinner.text
             
