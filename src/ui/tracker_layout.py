@@ -1,7 +1,6 @@
 import threading, time
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
-from kivy.app import App
 from services.analysis_service import calculate_k_premium
 from datetime import datetime
 
@@ -24,7 +23,7 @@ class PriceTrackerLayout(BoxLayout):
 
         threading.Thread(target=self.fetch_data_loop, daemon=True).start()
 
-    def update_watching_list(self, exchange_name, selected_items):
+    def update_watching_list(self, exchange_name_ignored, selected_items):
         self.running = False
         time.sleep(0.05)
         
@@ -32,13 +31,14 @@ class PriceTrackerLayout(BoxLayout):
         keys = ['slot_0', 'slot_1', 'slot_2', 'slot_3', 'slot_4']
         
         for i, item in enumerate(selected_items[:5]):
+            target_exchange = item.get('exchange', exchange_name_ignored)
             self.active_targets.append({
                 'key': keys[i],
-                'exchange': exchange_name,
+                'exchange': target_exchange,
                 'symbol': item['symbol']
             })
             
-        print(f"New targets ({len(self.active_targets)}): {self.active_targets}")
+        print(f"New targets (Mixed): {self.active_targets}")
         
         active_keys = [t['key'] for t in self.active_targets]
         for key, widget in self.widget_map.items():
@@ -138,10 +138,12 @@ class PriceTrackerLayout(BoxLayout):
             widget = self.widget_map.get(key)
             
             if widget and data:
-                widget.update_data(target['exchange'].capitalize(), data)
+                display_exchange = target['exchange'].capitalize()
+                widget.update_data(display_exchange, data)
                 
                 if 'KRW' in target['symbol']:
-                    self.k_premium_data['upbit'] = data.get('ob')
+                    if self.k_premium_data['upbit'] is None:
+                        self.k_premium_data['upbit'] = data.get('ob')
                 elif 'USDT' in target['symbol']:
                     if self.k_premium_data['binance'] is None:
                         self.k_premium_data['binance'] = data.get('ob')
@@ -158,7 +160,7 @@ class PriceTrackerLayout(BoxLayout):
                 self.ids.analysis_label.text = premium_result['text']
                 self.ids.analysis_label.color = premium_result['color']
         else:
-            self.ids.analysis_label.text = "Kimchi Premium (Need KRW & USDT markets)"
+            self.ids.analysis_label.text = "Kimchi Premium (Select KRW & USDT markets)"
             self.ids.analysis_label.color = (0.7, 0.7, 0.7, 1)
 
         self.ids.timestamp_label.text = f"Last Updated: {datetime.now().strftime('%H:%M:%S')}"
@@ -170,3 +172,4 @@ class PriceTrackerLayout(BoxLayout):
                 self.widget_map[key].set_error_state()
         self.ids.analysis_label.text = "Data Fetch Error!"
         self.ids.analysis_label.color = (1, 0.3, 0.3, 1)
+        self.ids.timestamp_label.text = "Last Updated: ERROR"
