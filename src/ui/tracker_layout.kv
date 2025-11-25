@@ -1,11 +1,12 @@
 #:import OrderBookWidget ui.order_book_widget.OrderBookWidget
+#:import TrendGraphWidget ui.trend_graph_widget.TrendGraphWidget
 #:import App kivy.app.App
 #:import dp kivy.metrics.dp
 
 <PriceTrackerLayout>:
     orientation: 'vertical'
     padding: dp(10)
-    spacing: dp(10)
+    spacing: dp(5)
 
     Button:
         text: "< Back to Search"
@@ -15,12 +16,11 @@
         on_release: App.get_running_app().switch_to_explorer()
 
     ScrollView:
-        size_hint_y: 0.85
+        size_hint_y: 0.55
         do_scroll_x: True
         do_scroll_y: False
         bar_width: dp(10)
-        scroll_type: ['bars', 'content']
-
+        
         BoxLayout:
             id: widgets_container
             orientation: 'horizontal'
@@ -52,26 +52,41 @@
 
     BoxLayout:
         orientation: 'vertical'
-        size_hint_y: 0.15
-        padding: (0, dp(5), 0, dp(5))
-        spacing: dp(2)
+        size_hint_y: 0.45
+        spacing: dp(5)
         
         Label:
             id: analysis_label
             text: "Kimchi Premium: Calculating..."
-            font_size: '18sp'
-            halign: 'center'
-            valign: 'middle'
+            font_size: '16sp'
+            size_hint_y: 0.15
             color: (0.8, 0.8, 0.8, 1)
-            size_hint_y: None
-            height: self.texture_size[1] + dp(5)
+
+        TrendGraphWidget:
+            id: trend_graph
+            size_hint_y: 0.7
+            
+        BoxLayout:
+            size_hint_y: 0.15
+            spacing: dp(10)
+            padding: (dp(20), 0)
+            
+            Button:
+                text: "1D"
+                on_release: root.update_graph_period('1D')
+            Button:
+                text: "1M"
+                on_release: root.update_graph_period('1M')
+            Button:
+                text: "3M"
+                on_release: root.update_graph_period('3M')
+            Button:
+                text: "1Y"
+                on_release: root.update_graph_period('1Y')
 
         Label:
             id: timestamp_label
             text: "Last Updated: --:--:--"
-            font_size: '12sp'
-            halign: 'center'
-            valign: 'middle'
-            color: (0.7, 0.7, 0.7, 1)
-            size_hint_y: None
-            height: self.texture_size[1]
+            font_size: '11sp'
+            size_hint_y: 0.1
+            color: (0.5, 0.5, 0.5, 1)
