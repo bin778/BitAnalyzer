@@ -1,6 +1,7 @@
 import threading, time
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
+from kivy.graphics import Color, Line
 from services.analysis_service import calculate_k_premium
 from services.database_service import DatabaseService
 from ui.trend_graph_widget import DetailGraphPopup
@@ -14,15 +15,11 @@ class PriceTrackerLayout(BoxLayout):
         
         self.running = False 
         self.active_targets = []
+        self.selected_slot_key = None
         
         self.widget_map = {
-            'slot_0': self.ids.slot_0,
-            'slot_1': self.ids.slot_1,
-            'slot_2': self.ids.slot_2,
-            'slot_3': self.ids.slot_3,
-            'slot_4': self.ids.slot_4
+            f'slot_{i}': getattr(self.ids, f'slot_{i}') for i in range(5)
         }
-        
         self.k_premium_data = {'upbit': None, 'binance': None}
 
         for key, widget in self.widget_map.items():
@@ -35,21 +32,24 @@ class PriceTrackerLayout(BoxLayout):
         if widget.collide_point(*touch.pos):
             target = next((t for t in self.active_targets if t['key'] == key), None)
             if target:
-                popup = DetailGraphPopup(
-                    self.db_service, 
-                    target['exchange'], 
-                    target['symbol']
-                )
-                popup.open()
+                self.select_slot(key)
+                self.show_popup(target)
             return True
         return False
     
     def open_trend_popup(self):
-        if not self.active_targets:
-            return
-
-        target = self.active_targets[0]
+        target = None
+        if self.selected_slot_key:
+            target = next((t for t in self.active_targets if t['key'] == self.selected_slot_key), None)
         
+        if not target and self.active_targets:
+            target = self.active_targets[0]
+            self.select_slot(target['key'])
+
+        if target:
+            self.show_popup(target)
+
+    def show_popup(self, target):
         popup = DetailGraphPopup(
             self.db_service, 
             target['exchange'], 
@@ -57,11 +57,23 @@ class PriceTrackerLayout(BoxLayout):
         )
         popup.open()
 
+    def select_slot(self, key):
+        self.selected_slot_key = key
+        for k, widget in self.widget_map.items():
+            widget.canvas.after.clear()
+        
+        sel = self.widget_map.get(key)
+        if sel:
+            with sel.canvas.after:
+                Color(1, 1, 0, 1)
+                Line(rectangle=(sel.x, sel.y, sel.width, sel.height), width=2)
+
     def update_watching_list(self, exchange_name_ignored, selected_items):
         self.running = False
         time.sleep(0.05)
         
         self.active_targets = []
+        self.selected_slot_key = None
         keys = ['slot_0', 'slot_1', 'slot_2', 'slot_3', 'slot_4']
         
         for i, item in enumerate(selected_items[:5]):
@@ -74,6 +86,7 @@ class PriceTrackerLayout(BoxLayout):
             
         active_keys = [t['key'] for t in self.active_targets]
         for key, widget in self.widget_map.items():
+            widget.canvas.after.clear()
             if key not in active_keys:
                 widget.ids.title_label.text = "Empty"
                 widget._set_ob_labels("-")
@@ -88,16 +101,13 @@ class PriceTrackerLayout(BoxLayout):
                     all_data, usdt_krw_price = self.fetch_data_internal_parallel()
                     Clock.schedule_once(lambda dt, d=all_data, p=usdt_krw_price: self.update_ui(d, p))
                     time.sleep(5) 
-                except Exception as e:
-                    print(f"fetch_data_loop Error: {e}")
+                except:
                     time.sleep(5)
             else:
                 time.sleep(0.5)
 
     def fetch_data_once(self):
-        if not self.running:
-            return
-        
+        if not self.running: return
         self.set_all_loading()
         threading.Thread(target=self._fetch_and_update_once, daemon=True).start()
 
@@ -105,15 +115,12 @@ class PriceTrackerLayout(BoxLayout):
         try:
             all_data, usdt_krw_price = self.fetch_data_internal_parallel()
             Clock.schedule_once(lambda dt, d=all_data, p=usdt_krw_price: self.update_ui(d, p))
-        except Exception as e:
-            print(f"fetch_data_once Error: {e}")
+        except: pass
 
     def fetch_data_internal_parallel(self):
         results = {}
         threads = []
-
-        if not self.active_targets:
-            return {}, None
+        if not self.active_targets: return {}, None
 
         for target in self.active_targets:
             key = target['key']
@@ -170,8 +177,8 @@ class PriceTrackerLayout(BoxLayout):
                 if last_price:
                     bids = ob.get('bids', [])
                     asks = ob.get('asks', [])
-                    best_bid = bids[0][0] if bids else None
-                    best_ask = asks[0][0] if asks else None
+                    best_bid = bids[0][0] if bids else 0
+                    best_ask = asks[0][0] if asks else 0
                     
                     self.db_service.save_ticker(
                         target['exchange'], 
@@ -202,11 +209,4 @@ class PriceTrackerLayout(BoxLayout):
         self.ids.timestamp_label.text = f"Last Updated: {datetime.now().strftime('%H:%M:%S')}"
 
     def update_ui_error(self):
-        for target in self.active_targets:
-            key = target['key']
-            if key in self.widget_map:
-                self.widget_map[key].set_error_state()
-                
-        self.ids.analysis_label.text = "Data Fetch Error!"
-        self.ids.analysis_label.color = (1, 0.3, 0.3, 1)
-        self.ids.timestamp_label.text = "Last Updated: ERROR"
+        pass
