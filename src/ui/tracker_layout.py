@@ -1,9 +1,9 @@
 import threading, time
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
-from kivy.app import App
 from services.analysis_service import calculate_k_premium
 from services.database_service import DatabaseService
+from ui.trend_graph_widget import DetailGraphPopup
 from datetime import datetime
 
 class PriceTrackerLayout(BoxLayout):
@@ -14,7 +14,6 @@ class PriceTrackerLayout(BoxLayout):
         
         self.running = False 
         self.active_targets = []
-        self.current_graph_period = '1D'
         
         self.widget_map = {
             'slot_0': self.ids.slot_0,
@@ -26,7 +25,37 @@ class PriceTrackerLayout(BoxLayout):
         
         self.k_premium_data = {'upbit': None, 'binance': None}
 
+        for key, widget in self.widget_map.items():
+            widget.bind(on_touch_down=lambda w, touch, k=key: self.on_slot_touch(k, touch))
+
         threading.Thread(target=self.fetch_data_loop, daemon=True).start()
+
+    def on_slot_touch(self, key, touch):
+        widget = self.widget_map.get(key)
+        if widget.collide_point(*touch.pos):
+            target = next((t for t in self.active_targets if t['key'] == key), None)
+            if target:
+                popup = DetailGraphPopup(
+                    self.db_service, 
+                    target['exchange'], 
+                    target['symbol']
+                )
+                popup.open()
+            return True
+        return False
+    
+    def open_trend_popup(self):
+        if not self.active_targets:
+            return
+
+        target = self.active_targets[0]
+        
+        popup = DetailGraphPopup(
+            self.db_service, 
+            target['exchange'], 
+            target['symbol']
+        )
+        popup.open()
 
     def update_watching_list(self, exchange_name_ignored, selected_items):
         self.running = False
@@ -51,21 +80,6 @@ class PriceTrackerLayout(BoxLayout):
 
         self.running = True
         self.fetch_data_once()
-        
-        if self.active_targets:
-            self.update_graph_period(self.current_graph_period)
-
-    def update_graph_period(self, period):
-        self.current_graph_period = period
-        if not self.active_targets: return
-        
-        target = self.active_targets[0]
-        
-        threading.Thread(target=self._fetch_graph_history, args=(target['exchange'], target['symbol'], period), daemon=True).start()
-
-    def _fetch_graph_history(self, exchange, symbol, period):
-        history = self.db_service.get_price_history(exchange, symbol, period)
-        Clock.schedule_once(lambda dt: self.ids.trend_graph.update_graph(history, period))
 
     def fetch_data_loop(self):
         while True: 
@@ -166,7 +180,7 @@ class PriceTrackerLayout(BoxLayout):
                         best_bid, 
                         best_ask
                     )
-                
+
                 if 'KRW' in target['symbol']:
                     if self.k_premium_data['upbit'] is None:
                         self.k_premium_data['upbit'] = data.get('ob')
@@ -192,6 +206,7 @@ class PriceTrackerLayout(BoxLayout):
             key = target['key']
             if key in self.widget_map:
                 self.widget_map[key].set_error_state()
+                
         self.ids.analysis_label.text = "Data Fetch Error!"
         self.ids.analysis_label.color = (1, 0.3, 0.3, 1)
         self.ids.timestamp_label.text = "Last Updated: ERROR"

@@ -38,12 +38,16 @@ class DatabaseService:
             self.db = self.client[db_name]
             self.collection = self.db["market_tickers"]
             
-            self.client.server_info()
-            print("MongoDB Connected Successfully (Authenticated).")
+            try:
+                self.collection.create_index("timestamp", expireAfterSeconds=31536000)
+            except:
+                pass
+                
             self.collection.create_index([("symbol", ASCENDING), ("exchange", ASCENDING), ("timestamp", DESCENDING)])
+            print("✅ MongoDB Connected Successfully.")
             
         except Exception as e:
-            print(f"MongoDB Connection Error: {e}")
+            print(f"❌ MongoDB Connection Error: {e}")
             self.enabled = False
 
     def save_ticker(self, exchange, symbol, price, best_bid, best_ask):
@@ -84,10 +88,15 @@ class DatabaseService:
             "timestamp": {"$gte": start_time}
         }
 
-        cursor = self.collection.find(query).sort("timestamp", ASCENDING).limit(500)
+        cursor = self.collection.find(query).sort("timestamp", ASCENDING).limit(1000)
         
         history = []
         for doc in cursor:
-            history.append((doc['timestamp'], doc['price']))
+            history.append({
+                'ts': doc['timestamp'],
+                'price': doc['price'],
+                'bid': doc.get('best_bid', 0),
+                'ask': doc.get('best_ask', 0)
+            })
             
         return history
