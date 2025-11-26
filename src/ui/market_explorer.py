@@ -19,10 +19,9 @@ class MarketItemRow(RecycleDataViewBehavior, BoxLayout):
         self.explorer = data.get('explorer')
         
         if self.explorer:
-            real_state = data.get('symbol') in self.explorer.selected_symbols
-            
+            unique_key = f"{data.get('exchange')}:{data.get('symbol')}"
+            real_state = unique_key in self.explorer.selected_items
             self.is_checked = real_state
-            
             if self.ids.checkbox.active != real_state:
                 self.ids.checkbox.active = real_state
         return
@@ -31,8 +30,10 @@ class MarketItemRow(RecycleDataViewBehavior, BoxLayout):
         if not self.explorer:
             return
 
-        is_actually_in_set = self.symbol in self.explorer.selected_symbols
-        if value == is_actually_in_set:
+        current_exchange = self.explorer.ids.exchange_spinner.text
+        unique_key = f"{current_exchange}:{self.symbol}"
+        is_actually_selected = unique_key in self.explorer.selected_items
+        if value == is_actually_selected:
             return
 
         success = self.explorer.toggle_selection(self.symbol, value)
@@ -46,10 +47,9 @@ class MarketItemRow(RecycleDataViewBehavior, BoxLayout):
             return True
         return super().on_touch_down(touch)
 
-
 class MarketExplorer(BoxLayout):
     raw_market_data = ListProperty([])
-    selected_symbols = set()
+    selected_items = {} 
 
     def __init__(self, price_service, **kwargs):
         super().__init__(**kwargs)
@@ -59,13 +59,12 @@ class MarketExplorer(BoxLayout):
     def load_markets(self, exchange_name):
         print(f"Loading markets for {exchange_name}...")
         self.raw_market_data = self.price_service.get_all_markets(exchange_name)
-        self.selected_symbols.clear()
         self.filter_list()
 
     def filter_list(self):
         search_text = self.ids.search_input.text.upper()
         quote_filter = self.ids.quote_spinner.text
-        
+        current_exchange = self.ids.exchange_spinner.text
         refresh_trigger = time.time()
         
         filtered_data = []
@@ -75,12 +74,14 @@ class MarketExplorer(BoxLayout):
             if quote_filter != 'All' and market['quote'] != quote_filter:
                 continue
             
+            unique_key = f"{current_exchange}:{market['symbol']}"
             filtered_data.append({
                 'symbol': market['symbol'],
                 'base_coin': market['base'],
                 'quote_currency': market['quote'],
+                'exchange': current_exchange,
                 'explorer': self,
-                'is_checked': market['symbol'] in self.selected_symbols,
+                'is_checked': unique_key in self.selected_items,
                 '_refresh_trigger': refresh_trigger
             })
             
@@ -88,45 +89,41 @@ class MarketExplorer(BoxLayout):
         self.update_selection_count()
 
     def toggle_selection(self, symbol, value):
+        current_exchange = self.ids.exchange_spinner.text
+        unique_key = f"{current_exchange}:{symbol}"
         if value:
-            current_selections = [
-                m for m in self.raw_market_data if m['symbol'] in self.selected_symbols
-            ]
-            
+            current_selections = list(self.selected_items.values())
             new_market = next((m for m in self.raw_market_data if m['symbol'] == symbol), None)
-            
-            # [규칙 1] Base Coin 통일 로직
-            if current_selections and new_market:
+            if not new_market: return False
+            market_to_save = new_market.copy()
+            market_to_save['exchange'] = current_exchange
+
+            if current_selections:
                 first_base = current_selections[0]['base']
-                
-                if new_market['base'] != first_base:
-                    print(f"Error: You must select the same base coin ({first_base}).")
+                if market_to_save['base'] != first_base:
+                    print(f"Error: Mix matched base coins. First: {first_base}, New: {market_to_save['base']}")
                     self.show_warning(f"Only {first_base} pairs allowed!") 
                     return False
 
-            # [규칙 2] Quote Coin 제한 (K-Premium 및 메이저 마켓 허용)
             allowed_quotes = ['KRW', 'USDT', 'USD', 'USDC', 'BUSD', 'BTC', 'ETH']
-            
-            if new_market and new_market['quote'] not in allowed_quotes:
-                print(f"Error: Quote {new_market['quote']} is not supported for comparison.")
+            if market_to_save['quote'] not in allowed_quotes:
                 self.show_warning("Quote not supported!")
                 return False
 
-            # [규칙 3] 3개 까지 선택
-            if len(self.selected_symbols) >= 3:
-                if symbol not in self.selected_symbols:
-                    self.show_limit_warning() 
-                    return False
-            self.selected_symbols.add(symbol)
+            if len(self.selected_items) >= 5:
+                self.show_limit_warning() 
+                return False
+
+            self.selected_items[unique_key] = market_to_save
         else:
-            self.selected_symbols.discard(symbol)
+            if unique_key in self.selected_items:
+                del self.selected_items[unique_key]
         
         self.update_selection_count()
         return True
 
     def show_limit_warning(self):
-        print("Maximum selection reached (3 items).")
-        self.show_warning("Max 3 Items Allowed!")
+        self.show_warning("Max 5 Items Allowed!")
 
     def show_warning(self, message):
         self.ids.analyze_btn.text = message
@@ -134,37 +131,33 @@ class MarketExplorer(BoxLayout):
         Clock.schedule_once(lambda dt: self.update_selection_count(), 1.5)
 
     def update_selection_count(self):
-        count = len(self.selected_symbols)
-        if count >= 3:
+        count = len(self.selected_items)
+        if count >= 5:
             self.ids.analyze_btn.background_color = (0.2, 0.6, 1, 1)
-            self.ids.analyze_btn.text = f"Analyze Selected ({count}/3)"
+            self.ids.analyze_btn.text = f"Analyze Selected ({count}/5)"
         elif count == 0:
             self.ids.analyze_btn.background_color = (0.5, 0.5, 0.5, 1)
-            self.ids.analyze_btn.text = "Select 1-3 items"
+            self.ids.analyze_btn.text = "Select 1-5 items"
         else:
             self.ids.analyze_btn.background_color = (0.2, 0.6, 1, 1)
-            self.ids.analyze_btn.text = f"Analyze Selected ({count}/3)"
+            self.ids.analyze_btn.text = f"Analyze Selected ({count}/5)"
 
     def reset_selection(self):
         print("Resetting selection (Nuke Strategy)...")
-        self.selected_symbols.clear()
-        
+        self.selected_items.clear()
         self.ids.rv.data = []
         self.ids.rv.refresh_from_data()
-        
         Clock.schedule_once(lambda dt: self.filter_list(), 0.1)
 
     def dispatch_analysis(self):
-        count = len(self.selected_symbols)
-        if 1 <= count <= 3:
+        count = len(self.selected_items)
+        if 1 <= count <= 5:
             app = App.get_running_app()
-            exchange_name = self.ids.exchange_spinner.text
+            current_exchange_context = self.ids.exchange_spinner.text
             
-            selected_items = [
-                m for m in self.raw_market_data if m['symbol'] in self.selected_symbols
-            ]
+            selected_list = list(self.selected_items.values())
             
             if hasattr(app, 'switch_to_tracker'):
-                app.switch_to_tracker(exchange_name, selected_items)
+                app.switch_to_tracker(current_exchange_context, selected_list)
 
             self.reset_selection()

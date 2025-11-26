@@ -7,7 +7,17 @@
 
 ## 📸 스크린샷
 
-<img width="662" height="940" src="https://github.com/user-attachments/assets/985227e0-ae31-4c0f-8320-9f2cc9f424c9" />
+### 1. 코인 목록 선택
+
+<img width="662" height="940" alt="image" src="https://github.com/user-attachments/assets/2cee6d72-5e76-4f81-be03-8b922719eea5" />
+
+### 2. 코인 시세/호가 확인
+
+<img width="662" height="940" alt="image" src="https://github.com/user-attachments/assets/8edb3d8f-5243-42d7-8fa2-91a989d00f2d" />
+
+### 3. 코인 추세선 그래프 확인
+
+<img width="662" height="940" src="https://github.com/user-attachments/assets/e675a222-9b2a-43a1-bfc2-11d07cffcb81" />
 
 ---
 
@@ -23,12 +33,14 @@
 
 - **호가창(Order Book) 분석:** 매수/매도 잔량을 비교하여 현재 시장의 추세(Strong Buy/Sell Pressure)를 텍스트와 색상으로 시각화
 - **김치 프리미엄(K-Premium):** 실시간 환율을 적용하여 해외 거래소 대비 국내 거래소의 가격 차이를 %로 계산
-- **거래 비교 분석:** 기본 비트코인 통일 및 화폐에 따른 제한(법정화폐 뿐만 아니라 BTC/ETH 마켓도 비교 가능)
+- **크로스 마켓 분석**: 기준 코인(Base Coin)을 통일하되, 다양한 결제 화폐(Quote Currency, 예: KRW, USDT, BTC, ETH) 간의 비교를 지원하여 폭넓은 분석 가능
 
 ### 3. 사용자 친화적 UI
 
 - **가독성 중심 디자인:** 직관적인 색상(Red/Green) 사용으로 상승/하락 및 매수/매도세 구분
+- **확장된 비교 슬롯:** 최대 5개의 마켓을 동시에 비교할 수 있는 가로 스크롤 뷰 제공
 - **반응형 레이아웃:** Kivy `.kv` 언어를 활용한 유연한 UI 구조
+- **추세선 그래프 팝업**: 상세 분석을 위한 독립된 팝업 창과 인터랙티브 차트 제공
 
 ---
 
@@ -56,11 +68,32 @@
 - [x] **기본 기능 구현:** 3개 거래소 시세/호가 비교 및 K-Premium 계산
 - [x] **UI 개선:** 현재가(Ticker) 추가 및 업데이트 타임스탬프 적용
 - [x] **마켓 확장 및 필터링:** - 메이저/마이너 거래소 전체 리스트 검색 기능
+  - 메이저/마이너 거래소 전체 리스트 검색 기능
   - 기축 통화별(USD, KRW, ETH, USDT) 그룹화 및 비교 기능
-- [ ] **심층 차트 분석:**
-  - 네이버 주식 스타일의 기간별(1일, 1주, 3개월 등) 추세선 그래프 시각화
-  - 특정 마켓 클릭 시 상세 분석 팝업(Modal) 제공
-- [ ] **이상 감지 알림:** 급격한 가격 변동 및 대량 거래 포착 시 알림 기능
+- [ ] **심층 차트 분석:** (테스트 중)
+  - 과거 데이터(OHLCV) 연동을 통한 기간별(1D, 1M, 3M, 1Y) 추세선 그래프 구현
+  - 최고가/최저가 표시 및 영역 채우기(Filled Area) 스타일 적용
+- [ ] 데이터베이스 연동: 실시간 호가 데이터를 MongoDB에 적재하여 장기적인 추세정분석 (진행 중)
+- [ ] **이상 감지 알림:** 급격한 가격 변동 및 대량 거래 포착 시 알림 기능 (진행 예정)
+
+---
+
+## 📈 향후 분석 기능 강화 (Analytics Roadmap)
+
+### 1. 크로스 마켓(Cross-Market) 비교
+
+- 동일 코인(예: BTC/USDT)을 여러 거래소(Binance, Bybit, Upbit 등)에서 동시에 띄워 거래소 간 가격 괴리율을 즉각적으로 포착.
+- **최대 5개 마켓 동시 비교**를 통해 차익 거래 기회 탐색.
+
+### 2. 스프레드(Spread) 및 추세 시각화
+
+- **최저 매도가(Lowest Ask) vs 최고 매수가(Highest Bid)** 의 흐름을 실시간 추세선 차트로 시각화.
+- 호가 공백(Gap)이나 비정상적인 스프레드 발생 시점을 시각적으로 식별하여 진입/청산 타이밍 보조.
+
+### 3. 유동성 및 수익성 분석 (Risk Management)
+
+- 거래 불가능한 영역(Liquidity Void)이나 슬리피지(Slippage)가 심한 마켓 감지.
+- 예상 수익률이 수수료보다 낮을 경우 경고 메시지 제공 등 실질적 이익 분석 기능 추가 예정.
 
 ---
 
@@ -73,11 +106,12 @@
   <img src="https://img.shields.io/badge/kivy-2.3.0-191A1B?style=for-the-badge&logo=kivy&logoColor=white">
 </p>
 
-#### Libraries & APIs
+#### DB & APIs
 
 <p>
   <img src="https://img.shields.io/badge/ccxt-Data_Fetching-F7931A?style=for-the-badge&logo=bitcoin&logoColor=white">
   <img src="https://img.shields.io/badge/asyncio-Concurrency-blue?style=for-the-badge">
+  <img src="https://img.shields.io/badge/-MongoDB-13aa52?style=for-the-badge&logo=mongodb&logoColor=white">
 </p>
 
 #### Tools
@@ -96,17 +130,21 @@
 ├── README.md
 └── src
     ├── __init__.py
-    ├── main.py
+    ├── main.py                 # 앱 엔트리 포인트
     ├── services
     │   ├── __init__.py
-    │   ├── analysis_service.py
-    │   └── price_service.py
+    │   ├── analysis_service.py # 데이터 분석 로직
+    │   ├── database_service.py # MongoDB 연동
+    │   └── price_service.py    # CCXT API 연동
     └── ui
         ├── __init__.py
         ├── order_book_widget.kv
         ├── order_book_widget.py
+        ├── trend_graph_widget.py # 추세선 그래프 및 팝업
         ├── tracker_layout.kv
-        └── tracker_layout.py
+        ├── tracker_layout.py
+        ├── market_explorer.kv
+        └── market_explorer.py
 ```
 
 ## 🚀 프로젝트 실행
@@ -114,13 +152,14 @@
 ### 사전 요구 사항
 
 - Python **3.8 이상**
-- Binance 계정 및 **API Key (Public 데이터 조회 시 일부 제한이 있을 수 있음)**
+- (선택) **MongoDB Community Server** (데이터 저장 기능 사용 시)
+- (선택) **Binance API Key** (Public 데이터 조회 시 일부 제한이 있을 수 있음)
 
 ### 설치
 
 ```bash
 # 1. 리포지토리 클론
-git clone https://github.com/[Your-Username]/BitAnalyzer.git
+git clone https://github.com/bin778/BitAnalyzer.git
 cd BitAnalyzer
 
 # (권장) 가상 환경 생성 및 활성화
@@ -129,7 +168,7 @@ source .venv/bin/activate  # macOS/Linux
 # .\.venv\Scripts\activate  # Windows
 
 # 필수 라이브러리 설치
-pip install kivy ccxt python-dotenv
+pip install kivy ccxt python-dotenv pymongo
 ```
 
 ### 환경 설정
@@ -139,6 +178,11 @@ pip install kivy ccxt python-dotenv
 ```ini
 BINANCE_API_KEY="YOUR_API_KEY_HERE"
 BINANCE_API_SECRET="YOUR_API_SECRET_HERE"
+
+MONGO_URI="mongodb://localhost:27017/"
+MONGO_DB_NAME="YOUR_DB_NAME"
+MONGO_USER="YOUR_DB_USER"
+MONGO_PASSWORD="YOUR_DB_PASSWORD"
 ```
 
 ### 실행 방법
@@ -146,5 +190,3 @@ BINANCE_API_SECRET="YOUR_API_SECRET_HERE"
 ```bash
 python src/main.py
 ```
-
-_(추후 업데이트 예정)_

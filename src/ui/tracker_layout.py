@@ -1,49 +1,94 @@
 import threading, time
 from kivy.uix.boxlayout import BoxLayout
 from kivy.clock import Clock
-from kivy.app import App
+from kivy.graphics import Color, Line
 from services.analysis_service import calculate_k_premium
+from services.database_service import DatabaseService
+from ui.trend_graph_widget import DetailGraphPopup
 from datetime import datetime
 
 class PriceTrackerLayout(BoxLayout):
     def __init__(self, price_service, **kwargs):
         super().__init__(**kwargs)
         self.price_service = price_service
+        self.db_service = DatabaseService()
+        
         self.running = False 
         self.active_targets = []
+        self.selected_slot_key = None
         
         self.widget_map = {
-            'slot_0': self.ids.slot_0,
-            'slot_1': self.ids.slot_1,
-            'slot_2': self.ids.slot_2
+            f'slot_{i}': getattr(self.ids, f'slot_{i}') for i in range(5)
         }
-        
         self.k_premium_data = {'upbit': None, 'binance': None}
+
+        for key, widget in self.widget_map.items():
+            widget.bind(on_touch_down=lambda w, touch, k=key: self.on_slot_touch(k, touch))
 
         threading.Thread(target=self.fetch_data_loop, daemon=True).start()
 
-    def update_watching_list(self, exchange_name, selected_items):
+    def on_slot_touch(self, key, touch):
+        widget = self.widget_map.get(key)
+        if widget.collide_point(*touch.pos):
+            target = next((t for t in self.active_targets if t['key'] == key), None)
+            if target:
+                self.select_slot(key)
+                self.show_popup(target)
+            return True
+        return False
+    
+    def open_trend_popup(self):
+        target = None
+        if self.selected_slot_key:
+            target = next((t for t in self.active_targets if t['key'] == self.selected_slot_key), None)
+        
+        if not target and self.active_targets:
+            target = self.active_targets[0]
+            self.select_slot(target['key'])
+
+        if target:
+            self.show_popup(target)
+
+    def show_popup(self, target):
+        popup = DetailGraphPopup(
+            self.db_service, 
+            target['exchange'], 
+            target['symbol']
+        )
+        popup.open()
+
+    def select_slot(self, key):
+        self.selected_slot_key = key
+        for k, widget in self.widget_map.items():
+            widget.canvas.after.clear()
+        
+        sel = self.widget_map.get(key)
+        if sel:
+            with sel.canvas.after:
+                Color(1, 1, 0, 1)
+                Line(rectangle=(sel.x, sel.y, sel.width, sel.height), width=2)
+
+    def update_watching_list(self, exchange_name_ignored, selected_items):
         self.running = False
         time.sleep(0.05)
         
         self.active_targets = []
-        keys = ['slot_0', 'slot_1', 'slot_2']
+        self.selected_slot_key = None
+        keys = ['slot_0', 'slot_1', 'slot_2', 'slot_3', 'slot_4']
         
-        for i, item in enumerate(selected_items[:3]):
+        for i, item in enumerate(selected_items[:5]):
+            target_exchange = item.get('exchange', exchange_name_ignored)
             self.active_targets.append({
                 'key': keys[i],
-                'exchange': exchange_name,
+                'exchange': target_exchange,
                 'symbol': item['symbol']
             })
             
-        print(f"New targets: {self.active_targets}")
-        
+        active_keys = [t['key'] for t in self.active_targets]
         for key, widget in self.widget_map.items():
-            if key not in [t['key'] for t in self.active_targets]:
+            widget.canvas.after.clear()
+            if key not in active_keys:
                 widget.ids.title_label.text = "Empty"
-                widget.ids.last_price_label.text = "Last: -"
-                widget.ids.last_price_label.color = (1,1,1,1)
-                widget.ids.trend_label.text = "Trend: -"
                 widget._set_ob_labels("-")
 
         self.running = True
@@ -56,17 +101,13 @@ class PriceTrackerLayout(BoxLayout):
                     all_data, usdt_krw_price = self.fetch_data_internal_parallel()
                     Clock.schedule_once(lambda dt, d=all_data, p=usdt_krw_price: self.update_ui(d, p))
                     time.sleep(5) 
-                except Exception as e:
-                    print(f"fetch_data_loop 에러: {e}")
-                    Clock.schedule_once(lambda dt: self.update_ui_error())
+                except:
                     time.sleep(5)
             else:
                 time.sleep(0.5)
 
     def fetch_data_once(self):
-        if not self.running:
-            return
-        
+        if not self.running: return
         self.set_all_loading()
         threading.Thread(target=self._fetch_and_update_once, daemon=True).start()
 
@@ -74,16 +115,12 @@ class PriceTrackerLayout(BoxLayout):
         try:
             all_data, usdt_krw_price = self.fetch_data_internal_parallel()
             Clock.schedule_once(lambda dt, d=all_data, p=usdt_krw_price: self.update_ui(d, p))
-        except Exception as e:
-            print(f"fetch_data_once 에러: {e}")
-            Clock.schedule_once(lambda dt: self.update_ui_error())
+        except: pass
 
     def fetch_data_internal_parallel(self):
         results = {}
         threads = []
-        
-        if not self.active_targets:
-            return {}, None
+        if not self.active_targets: return {}, None
 
         for target in self.active_targets:
             key = target['key']
@@ -112,19 +149,14 @@ class PriceTrackerLayout(BoxLayout):
                 'ob': results.get(f"{key}_ob"),
                 'ticker': results.get(f"{key}_ticker")
             }
-            
-        usdt_krw_price = results.get('usdt_krw')
-        return all_data, usdt_krw_price
+        return all_data, results.get('usdt_krw')
 
     def set_all_loading(self):
         for target in self.active_targets:
             key = target['key']
             if key in self.widget_map:
                 self.widget_map[key].set_loading_state()
-        
-        self.ids.analysis_label.text = "Kimchi Premium: Calculating..."
-        self.ids.analysis_label.color = (0.8, 0.8, 0.8, 1)
-        self.ids.timestamp_label.text = "Last Updated: --:--:--"
+        self.ids.analysis_label.text = "Updating..."
 
     def update_ui(self, all_data, usdt_krw_price):
         self.k_premium_data = {'upbit': None, 'binance': None}
@@ -135,10 +167,30 @@ class PriceTrackerLayout(BoxLayout):
             widget = self.widget_map.get(key)
             
             if widget and data:
-                widget.update_data(target['exchange'].capitalize(), data)
+                display_exchange = target['exchange'].capitalize()
+                widget.update_data(display_exchange, data)
                 
+                ticker = data.get('ticker', {})
+                ob = data.get('ob', {})
+                last_price = ticker.get('last')
+                
+                if last_price:
+                    bids = ob.get('bids', [])
+                    asks = ob.get('asks', [])
+                    best_bid = bids[0][0] if bids else 0
+                    best_ask = asks[0][0] if asks else 0
+                    
+                    self.db_service.save_ticker(
+                        target['exchange'], 
+                        target['symbol'], 
+                        last_price, 
+                        best_bid, 
+                        best_ask
+                    )
+
                 if 'KRW' in target['symbol']:
-                    self.k_premium_data['upbit'] = data.get('ob')
+                    if self.k_premium_data['upbit'] is None:
+                        self.k_premium_data['upbit'] = data.get('ob')
                 elif 'USDT' in target['symbol']:
                     if self.k_premium_data['binance'] is None:
                         self.k_premium_data['binance'] = data.get('ob')
@@ -146,26 +198,15 @@ class PriceTrackerLayout(BoxLayout):
         upbit_data = self.k_premium_data['upbit']
         bin_data = self.k_premium_data['binance']
         
-        if upbit_data and bin_data:
-            if not usdt_krw_price:
-                self.ids.analysis_label.text = "Kimchi Premium: (Error: USDT/KRW Rate N/A)"
-                self.ids.analysis_label.color = (1, 0.3, 0.3, 1)
-            else:
-                premium_result = calculate_k_premium(upbit_data, bin_data, usdt_krw_price)
-                self.ids.analysis_label.text = premium_result['text']
-                self.ids.analysis_label.color = premium_result['color']
+        if upbit_data and bin_data and usdt_krw_price:
+            premium_result = calculate_k_premium(upbit_data, bin_data, usdt_krw_price)
+            self.ids.analysis_label.text = premium_result['text']
+            self.ids.analysis_label.color = premium_result['color']
         else:
-            self.ids.analysis_label.text = "Kimchi Premium (Select KRW & USDT market)"
-            self.ids.analysis_label.color = (0.7, 0.7, 0.7, 1)
+            self.ids.analysis_label.text = "Kimchi Premium (Select KRW & USDT markets)"
+            self.ids.analysis_label.color = (0.5, 0.5, 0.5, 1)
 
         self.ids.timestamp_label.text = f"Last Updated: {datetime.now().strftime('%H:%M:%S')}"
 
     def update_ui_error(self):
-        for target in self.active_targets:
-            key = target['key']
-            if key in self.widget_map:
-                self.widget_map[key].set_error_state()
-                
-        self.ids.analysis_label.text = "Kimchi Premium: ERROR!"
-        self.ids.analysis_label.color = (1, 0.3, 0.3, 1)
-        self.ids.timestamp_label.text = "Last Updated: ERROR"
+        pass
