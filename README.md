@@ -7,7 +7,17 @@
 
 ## 📸 스크린샷
 
-<img width="662" height="940" src="https://github.com/user-attachments/assets/985227e0-ae31-4c0f-8320-9f2cc9f424c9" />
+### 1. 코인 목록 선택
+
+<img width="662" height="940" alt="image" src="https://github.com/user-attachments/assets/2cee6d72-5e76-4f81-be03-8b922719eea5" />
+
+### 2. 코인 시세/호가 확인
+
+<img width="662" height="940" alt="image" src="https://github.com/user-attachments/assets/8edb3d8f-5243-42d7-8fa2-91a989d00f2d" />
+
+### 3. 코인 추세선 그래프 확인
+
+<img width="662" height="940" src="https://github.com/user-attachments/assets/e675a222-9b2a-43a1-bfc2-11d07cffcb81" />
 
 ---
 
