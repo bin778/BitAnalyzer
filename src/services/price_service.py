@@ -2,21 +2,37 @@ import os, ccxt
 from dotenv import load_dotenv
 from datetime import datetime
 
+# TODO: 데이터 처리 방식을 비동기로 변경할 것!
 class PriceService:
     def __init__(self):
         load_dotenv()
+
         api_key = os.getenv('BINANCE_API_KEY')
         api_secret = os.getenv('BINANCE_API_SECRET')
         
         self.binance_client = ccxt.binance({'apiKey': api_key, 'secret': api_secret})
         self.upbit_client = ccxt.upbit()
         self.bybit_client = ccxt.bybit()
+        self.bitfinex_client = ccxt.bitfinex()
+        self.kucoin_client = ccxt.kucoin()
 
     def get_btc_order_book(self, client_name, symbol, limit=5):
         try:
             client = getattr(self, f"{client_name.lower()}_client")
-            ob = client.fetch_l2_order_book(symbol, limit=limit)
-            return {'symbol': symbol, 'bids': ob['bids'], 'asks': ob['asks']}
+            
+            request_limit = limit
+            if client_name.lower() == 'bitfinex':
+                request_limit = 25
+            elif client_name.lower() == 'kucoin':
+                request_limit = 20
+            
+            ob = client.fetch_l2_order_book(symbol, limit=request_limit)
+            
+            return {
+                'symbol': symbol, 
+                'bids': ob['bids'][:limit], 
+                'asks': ob['asks'][:limit]
+            }
         except Exception as e:
             print(f"{client_name} OrderBook Error: {e}")
             return {'error': str(e)}

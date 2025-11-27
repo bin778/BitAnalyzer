@@ -56,8 +56,6 @@ class BitAnalyzerApp(App):
         self.sm.transition.direction = 'right'
         self.sm.current = 'explorer'
 
-# TODO: 여기서 실행 속도(데이터 수집)를 어떻게 빠르게 하면 좋을까?
-# TODO: 또한 애플리케이션에서 보안 관련 이슈는 어떤 게 있을까?
 if __name__ == '__main__':
     Builder.load_file('src/ui/order_book_widget.kv')
     Builder.load_file('src/ui/tracker_layout.kv')
