@@ -1,4 +1,4 @@
-import time
+import time, asyncio
 from kivy.uix.boxlayout import BoxLayout
 from kivy.properties import StringProperty, BooleanProperty, ObjectProperty, ListProperty
 from kivy.uix.recycleview.views import RecycleDataViewBehavior
@@ -58,7 +58,11 @@ class MarketExplorer(BoxLayout):
 
     def load_markets(self, exchange_name):
         print(f"Loading markets for {exchange_name}...")
-        self.raw_market_data = self.price_service.get_all_markets(exchange_name)
+        asyncio.create_task(self.fetch_markets_async(exchange_name))
+    
+    async def fetch_markets_async(self, exchange_name):
+        self.ids.analyze_btn.text = "Loading..."
+        self.raw_market_data = await self.price_service.get_all_markets(exchange_name)
         self.filter_list()
 
     def filter_list(self):

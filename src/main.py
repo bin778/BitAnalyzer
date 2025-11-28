@@ -1,3 +1,4 @@
+import asyncio
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
@@ -60,5 +61,15 @@ if __name__ == '__main__':
     Builder.load_file('src/ui/order_book_widget.kv')
     Builder.load_file('src/ui/tracker_layout.kv')
     Builder.load_file('src/ui/market_explorer.kv')
+
+    app = BitAnalyzerApp()
+    loop = asyncio.get_event_loop()
     
-    BitAnalyzerApp().run()
+    try:
+        loop.run_until_complete(app.async_run())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if hasattr(app, 'price_service'):
+            loop.run_until_complete(app.price_service.close_all())
+        loop.close()
