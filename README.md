@@ -9,15 +9,15 @@
 
 ### 1. 코인 목록 선택
 
-<img width="662" height="940" alt="image" src="https://github.com/user-attachments/assets/2cee6d72-5e76-4f81-be03-8b922719eea5" />
+<img width="1330" height="940" alt="image" src="https://github.com/user-attachments/assets/af4731ea-b2c6-4de2-b5bb-e97dbe7ca790" />
 
 ### 2. 코인 시세/호가 확인
 
-<img width="662" height="940" alt="image" src="https://github.com/user-attachments/assets/8edb3d8f-5243-42d7-8fa2-91a989d00f2d" />
+<img width="1150" height="940" alt="image" src="https://github.com/user-attachments/assets/3b1bbf95-b40c-4485-ae83-bde1727590a1" />
 
 ### 3. 코인 추세선 그래프 확인
 
-<img width="662" height="940" src="https://github.com/user-attachments/assets/e675a222-9b2a-43a1-bfc2-11d07cffcb81" />
+<img width="2202" height="1880" alt="image" src="https://github.com/user-attachments/assets/63ad95bc-0e0b-48d3-9e14-37fec71b1e15" />
 
 ---
 
@@ -70,7 +70,7 @@
 - [x] **마켓 확장 및 필터링:** - 메이저/마이너 거래소 전체 리스트 검색 기능
   - 메이저/마이너 거래소 전체 리스트 검색 기능
   - 기축 통화별(USD, KRW, ETH, USDT) 그룹화 및 비교 기능
-- [ ] **심층 차트 분석:** (테스트 중)
+- [x] **심층 차트 분석:**
   - 과거 데이터(OHLCV) 연동을 통한 기간별(1D, 1M, 3M, 1Y) 추세선 그래프 구현
   - 최고가/최저가 표시 및 영역 채우기(Filled Area) 스타일 적용
 - [ ] 데이터베이스 연동: 실시간 호가 데이터를 MongoDB에 적재하여 장기적인 추세정분석 (진행 중)
