@@ -17,7 +17,7 @@
 
 ### 3. 코인 추세선 그래프 확인
 
-<img width="2202" height="1880" alt="image" src="https://github.com/user-attachments/assets/63ad95bc-0e0b-48d3-9e14-37fec71b1e15" />
+<img width="1150" height="940" alt="image" src="https://github.com/user-attachments/assets/63ad95bc-0e0b-48d3-9e14-37fec71b1e15" />
 
 ---
 
