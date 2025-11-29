@@ -1,3 +1,4 @@
+import asyncio
 from kivy.app import App
 from kivy.core.window import Window
 from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
@@ -56,11 +57,19 @@ class BitAnalyzerApp(App):
         self.sm.transition.direction = 'right'
         self.sm.current = 'explorer'
 
-# TODO: 여기서 실행 속도(데이터 수집)를 어떻게 빠르게 하면 좋을까?
-# TODO: 또한 애플리케이션에서 보안 관련 이슈는 어떤 게 있을까?
 if __name__ == '__main__':
     Builder.load_file('src/ui/order_book_widget.kv')
     Builder.load_file('src/ui/tracker_layout.kv')
     Builder.load_file('src/ui/market_explorer.kv')
+
+    app = BitAnalyzerApp()
+    loop = asyncio.get_event_loop()
     
-    BitAnalyzerApp().run()
+    try:
+        loop.run_until_complete(app.async_run())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        if hasattr(app, 'price_service'):
+            loop.run_until_complete(app.price_service.close_all())
+        loop.close()

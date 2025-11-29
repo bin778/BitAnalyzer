@@ -1,6 +1,5 @@
-import threading, time
+import asyncio
 from kivy.uix.boxlayout import BoxLayout
-from kivy.clock import Clock
 from kivy.graphics import Color, Line
 from services.analysis_service import calculate_k_premium
 from services.database_service import DatabaseService
@@ -13,7 +12,7 @@ class PriceTrackerLayout(BoxLayout):
         self.price_service = price_service
         self.db_service = DatabaseService()
         
-        self.running = False 
+        self.tracking_task = None
         self.active_targets = []
         self.selected_slot_key = None
         
@@ -24,8 +23,6 @@ class PriceTrackerLayout(BoxLayout):
 
         for key, widget in self.widget_map.items():
             widget.bind(on_touch_down=lambda w, touch, k=key: self.on_slot_touch(k, touch))
-
-        threading.Thread(target=self.fetch_data_loop, daemon=True).start()
 
     def on_slot_touch(self, key, touch):
         widget = self.widget_map.get(key)
@@ -69,9 +66,10 @@ class PriceTrackerLayout(BoxLayout):
                 Line(rectangle=(sel.x, sel.y, sel.width, sel.height), width=2)
 
     def update_watching_list(self, exchange_name_ignored, selected_items):
-        self.running = False
-        time.sleep(0.05)
-        
+        if self.tracking_task:
+            self.tracking_task.cancel()
+            self.tracking_task = None
+
         self.active_targets = []
         self.selected_slot_key = None
         keys = ['slot_0', 'slot_1', 'slot_2', 'slot_3', 'slot_4']
@@ -91,72 +89,55 @@ class PriceTrackerLayout(BoxLayout):
                 widget.ids.title_label.text = "Empty"
                 widget._set_ob_labels("-")
 
-        self.running = True
-        self.fetch_data_once()
+        if self.active_targets:
+            self.tracking_task = asyncio.create_task(self.start_tracking_loop())
 
-    def fetch_data_loop(self):
-        while True: 
-            if self.running:
-                try:
-                    all_data, usdt_krw_price = self.fetch_data_internal_parallel()
-                    Clock.schedule_once(lambda dt, d=all_data, p=usdt_krw_price: self.update_ui(d, p))
-                    time.sleep(5) 
-                except:
-                    time.sleep(5)
-            else:
-                time.sleep(0.5)
-
-    def fetch_data_once(self):
-        if not self.running: return
-        self.set_all_loading()
-        threading.Thread(target=self._fetch_and_update_once, daemon=True).start()
-
-    def _fetch_and_update_once(self):
+    async def start_tracking_loop(self):
         try:
-            all_data, usdt_krw_price = self.fetch_data_internal_parallel()
-            Clock.schedule_once(lambda dt, d=all_data, p=usdt_krw_price: self.update_ui(d, p))
-        except: pass
+            while True:
+                self.set_all_loading()
+                await self.fetch_and_update()
+                await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            print("Tracking loop stopped.")
+        except Exception as e:
+            print(f"Tracking Loop Error: {e}")
 
-    def fetch_data_internal_parallel(self):
-        results = {}
-        threads = []
-        if not self.active_targets: return {}, None
-
+    async def fetch_and_update(self):
+        tasks = []
+        
         for target in self.active_targets:
-            key = target['key']
             ex = target['exchange']
             sym = target['symbol']
             
-            def fetch_ob(k=key, e=ex, s=sym):
-                results[f"{k}_ob"] = self.price_service.get_btc_order_book(e, s)
-            def fetch_ticker(k=key, e=ex, s=sym):
-                results[f"{k}_ticker"] = self.price_service.get_ticker(e, s)
+            tasks.append(self.price_service.get_btc_order_book(ex, sym))
+            tasks.append(self.price_service.get_ticker(ex, sym))
+
+        tasks.append(self.price_service.get_usdt_krw_price())
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        usdt_krw_price = results[-1]
+        if isinstance(usdt_krw_price, Exception): usdt_krw_price = None
+
+        data_map = {}
+        for i, target in enumerate(self.active_targets):
+            idx = i * 2
+            ob_res = results[idx]
+            ticker_res = results[idx+1]
             
-            threads.append(threading.Thread(target=fetch_ob, daemon=True))
-            threads.append(threading.Thread(target=fetch_ticker, daemon=True))
+            if isinstance(ob_res, Exception): ob_res = {'error': str(ob_res)}
+            if isinstance(ticker_res, Exception): ticker_res = {'error': str(ticker_res)}
 
-        def fetch_usdt_krw():
-            results['usdt_krw'] = self.price_service.get_usdt_krw_price()
-        threads.append(threading.Thread(target=fetch_usdt_krw, daemon=True))
-
-        for t in threads: t.start()
-        for t in threads: t.join()
-
-        all_data = {}
-        for target in self.active_targets:
-            key = target['key']
-            all_data[key] = {
-                'ob': results.get(f"{key}_ob"),
-                'ticker': results.get(f"{key}_ticker")
+            data_map[target['key']] = {
+                'ob': ob_res,
+                'ticker': ticker_res
             }
-        return all_data, results.get('usdt_krw')
+
+        self.update_ui(data_map, usdt_krw_price)
 
     def set_all_loading(self):
-        for target in self.active_targets:
-            key = target['key']
-            if key in self.widget_map:
-                self.widget_map[key].set_loading_state()
-        self.ids.analysis_label.text = "Updating..."
+        pass 
 
     def update_ui(self, all_data, usdt_krw_price):
         self.k_premium_data = {'upbit': None, 'binance': None}
@@ -174,19 +155,22 @@ class PriceTrackerLayout(BoxLayout):
                 ob = data.get('ob', {})
                 last_price = ticker.get('last')
                 
-                if last_price:
+                if last_price and not isinstance(last_price, str):
                     bids = ob.get('bids', [])
                     asks = ob.get('asks', [])
                     best_bid = bids[0][0] if bids else 0
                     best_ask = asks[0][0] if asks else 0
                     
-                    self.db_service.save_ticker(
-                        target['exchange'], 
-                        target['symbol'], 
-                        last_price, 
-                        best_bid, 
-                        best_ask
-                    )
+                    try:
+                        self.db_service.save_ticker(
+                            target['exchange'], 
+                            target['symbol'], 
+                            last_price, 
+                            best_bid, 
+                            best_ask
+                        )
+                    except Exception as e:
+                        print(f"DB Save Error: {e}")
 
                 if 'KRW' in target['symbol']:
                     if self.k_premium_data['upbit'] is None:
@@ -207,6 +191,3 @@ class PriceTrackerLayout(BoxLayout):
             self.ids.analysis_label.color = (0.5, 0.5, 0.5, 1)
 
         self.ids.timestamp_label.text = f"Last Updated: {datetime.now().strftime('%H:%M:%S')}"
-
-    def update_ui_error(self):
-        pass
