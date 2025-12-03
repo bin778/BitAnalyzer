@@ -6,8 +6,10 @@ from kivy.graphics import Color, Line, Rectangle, Mesh
 from kivy.metrics import dp
 from kivy.uix.modalview import ModalView
 from kivy.uix.button import Button
+from kivy.uix.togglebutton import ToggleButton
 from kivy.app import App
 
+# 거래소별 고유 색상
 EXCHANGE_COLORS = {
     'Binance': (1, 0.84, 0, 1),    # Gold
     'Upbit': (0.12, 0.56, 1, 1),   # Blue
@@ -20,7 +22,7 @@ DEFAULT_COLOR = (0.8, 0.8, 0.8, 1)
 class DetailGraphPopup(ModalView):
     def __init__(self, db_service, exchange, symbol, **kwargs):
         super().__init__(**kwargs)
-        self.size_hint = (0.95, 0.85)
+        self.size_hint = (0.95, 0.90)
         self.auto_dismiss = True
         self.background_color = (0, 0, 0, 0.9)
         
@@ -28,27 +30,24 @@ class DetailGraphPopup(ModalView):
         self.price_service = App.get_running_app().price_service
         self.main_exchange = exchange
         self.symbol = symbol
+        self.usdt_krw_rate = 1400.0
 
         app = App.get_running_app()
         tracker_layout = app.root.get_screen('tracker').layout
         
         self.compare_targets = []
-
         self.compare_targets.append({'exchange': exchange, 'symbol': symbol})
         
         current_base = symbol.split('/')[0]
         for t in tracker_layout.active_targets:
             t_base = t['symbol'].split('/')[0]
             if t['exchange'] != exchange and t_base == current_base:
-                self.compare_targets.append({'exchange': t['exchange'], 'symbol': t['symbol']})
+                self.compare_targets.append(t)
 
         main_layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(5))
         
         header = BoxLayout(size_hint_y=None, height=dp(40))
-        title_text = f"{exchange.upper()} {symbol}"
-        if len(self.compare_targets) > 1:
-            title_text += f" vs {len(self.compare_targets)-1} Others"
-            
+        title_text = f"{exchange.upper()} {symbol} Analysis"
         title = Label(text=title_text, font_size='18sp', bold=True, halign='left')
         title.bind(size=title.setter('text_size'))
         close = Button(text="X", size_hint_x=None, width=dp(40), background_color=(0.3,0.3,0.3,1))
@@ -56,6 +55,9 @@ class DetailGraphPopup(ModalView):
         header.add_widget(title)
         header.add_widget(close)
         main_layout.add_widget(header)
+
+        self.toggle_layout = BoxLayout(size_hint_y=None, height=dp(40), spacing=dp(5))
+        main_layout.add_widget(self.toggle_layout)
 
         self.graph_widget = TrendGraphWidget()
         main_layout.add_widget(self.graph_widget)
@@ -68,7 +70,31 @@ class DetailGraphPopup(ModalView):
         main_layout.add_widget(btn_box)
 
         self.add_widget(main_layout)
+        
+        self.init_toggles()
         self.trigger_load('1D')
+
+    def init_toggles(self):
+        self.toggle_layout.clear_widgets()
+        for target in self.compare_targets:
+            ex_name = target['exchange']
+            btn = ToggleButton(
+                text=ex_name, 
+                size_hint_x=0.3,
+                state='down',
+                background_color=(0.3, 0.3, 0.3, 1)
+            )
+
+            c = EXCHANGE_COLORS.get(ex_name, DEFAULT_COLOR)
+            btn.color = c
+            
+            btn.bind(on_press=lambda instance, ex=ex_name: self.on_toggle(ex, instance.state))
+            self.toggle_layout.add_widget(btn)
+
+    def on_toggle(self, exchange_name, state):
+        
+        is_active = (state == 'down')
+        self.graph_widget.set_visibility(exchange_name, is_active)
 
     def trigger_load(self, period):
         asyncio.create_task(self.load_data_async(period))
@@ -76,6 +102,12 @@ class DetailGraphPopup(ModalView):
     async def load_data_async(self, period):
         self.graph_widget.set_loading()
         try:
+
+            self.usdt_krw_rate = await self.price_service.get_usdt_krw_price()
+            if not self.usdt_krw_rate:
+                self.usdt_krw_rate = 1400.0
+            
+
             tasks = []
             for target in self.compare_targets:
                 tasks.append(self.price_service.fetch_ohlcv_history(target['exchange'], target['symbol'], period))
@@ -86,10 +118,13 @@ class DetailGraphPopup(ModalView):
             for i, target in enumerate(self.compare_targets):
                 ex_name = target['exchange']
                 history = results[i]
-                if history:
-                    combined_data[ex_name] = history
+                
+                combined_data[ex_name] = {
+                    'symbol': target['symbol'],
+                    'history': history
+                }
             
-            self.graph_widget.update_graph(combined_data, period)
+            self.graph_widget.update_graph(combined_data, period, self.usdt_krw_rate)
             
         except Exception as e:
             print(f"Graph Load Error: {e}")
@@ -99,43 +134,90 @@ class TrendGraphWidget(BoxLayout):
         super().__init__(**kwargs)
         self.orientation = 'vertical'
         
-        self.info_lbl = Label(text="Loading...", size_hint_y=0.1, markup=True, font_size='14sp')
+        self.info_lbl = Label(text="Loading...", size_hint_y=0.1, markup=True, font_size='13sp')
         self.add_widget(self.info_lbl)
         
         self.canvas_area = GraphCanvas()
         self.add_widget(self.canvas_area)
+        
+        self.raw_data_map = {}
+        self.active_exchanges = set()
+        self.current_period = '1D'
+        self.current_rate = 1400.0
 
     def set_loading(self):
-        self.info_lbl.text = "Fetching Data..."
+        self.info_lbl.text = "Fetching Data & Normalizing..."
         self.canvas_area.clear_graph()
 
-    def update_graph(self, data_map, period):
-        if not data_map:
+    def set_visibility(self, exchange_name, is_active):
+        if is_active:
+            self.active_exchanges.add(exchange_name)
+        else:
+            if exchange_name in self.active_exchanges:
+                self.active_exchanges.remove(exchange_name)
+        
+        self.redraw_with_filter()
+
+    def update_graph(self, data_map, period, rate):
+        self.raw_data_map = data_map
+        self.current_period = period
+        self.current_rate = rate
+        
+        self.active_exchanges = set(data_map.keys())
+        self.redraw_with_filter()
+
+    def redraw_with_filter(self):
+        if not self.raw_data_map:
             self.info_lbl.text = "No Data Available"
             return
 
-        all_prices = []
+        visible_data = {}
+        all_normalized_prices = []
         last_prices_info = []
 
-        for ex_name, history in data_map.items():
-            prices = [d['price'] for d in history]
-            all_prices.extend(prices)
+        for ex_name in self.active_exchanges:
+            if ex_name not in self.raw_data_map: continue
             
-            curr = prices[-1]
-            start = prices[0]
-            color_hex = "55ff55" if curr >= start else "ff5555"
+            entry = self.raw_data_map[ex_name]
+            symbol = entry['symbol']
+            history = entry['history']
+            
+            if not history: continue
+
+            is_krw = 'KRW' in symbol
+            normalized_history = []
+            
+            for h in history:
+                new_h = h.copy()
+                if is_krw:
+                    new_h['price'] = h['price'] / self.current_rate
+                normalized_history.append(new_h)
+            
+            visible_data[ex_name] = normalized_history
+            prices = [d['price'] for d in normalized_history]
+            all_normalized_prices.extend(prices)
+
             ex_color = EXCHANGE_COLORS.get(ex_name, DEFAULT_COLOR)
             ex_color_hex = "".join([f"{int(c*255):02x}" for c in ex_color[:3]])
+            orig_last = history[-1]['price']
+            currency_symbol = "₩" if is_krw else "$"
             
             last_prices_info.append(
-                f"[color={ex_color_hex}]{ex_name}[/color]: [b]{curr:,.2f}[/b] ([color={color_hex}]{'Up' if curr>=start else 'Down'}[/color])"
+                f"[color={ex_color_hex}]{ex_name}[/color] {currency_symbol}{orig_last:,.0f}" if is_krw else
+                f"[color={ex_color_hex}]{ex_name}[/color] {currency_symbol}{orig_last:,.2f}"
             )
 
-        global_max = max(all_prices)
-        global_min = min(all_prices)
+        if not all_normalized_prices:
+            self.canvas_area.clear_graph()
+            self.info_lbl.text = "No Exchanges Selected"
+            return
+
+        global_max = max(all_normalized_prices)
+        global_min = min(all_normalized_prices)
         
-        self.info_lbl.text = f"[{period}] " + "  |  ".join(last_prices_info)
-        self.canvas_area.draw_chart(data_map, global_min, global_max, period)
+        self.info_lbl.text = f"[{self.current_period}] " + "  |  ".join(last_prices_info)
+        
+        self.canvas_area.draw_chart(visible_data, global_min, global_max, self.current_period)
 
 class GraphCanvas(RelativeLayout):
     def __init__(self, **kwargs):
@@ -183,9 +265,9 @@ class GraphCanvas(RelativeLayout):
                 Line(points=[padding_left, py, w, py], dash_offset=4, dash_length=4)
                 
                 lbl = Label(
-                    text=f"{price:,.0f}", 
+                    text=f"${price:,.2f}",
                     font_size='10sp', 
-                    color=(0.7, 0.7, 0.7, 1),
+                    color=(0.5, 0.5, 0.5, 1),
                     size_hint=(None, None), 
                     size=(padding_left, dp(20)),
                     pos=(0, py - dp(10)),
@@ -199,76 +281,43 @@ class GraphCanvas(RelativeLayout):
             for i in range(x_steps):
                 idx = int((count - 1) * (i / (x_steps - 1)))
                 if idx < len(first_data):
-                    d = first_data[idx]
-                    ts = d['ts']
-                    
-                    if period == '1D':
-                        t_str = ts.strftime("%H:%M")
-                    elif period == '1M':
-                        t_str = ts.strftime("%m-%d")
-                    else:
-                        t_str = ts.strftime("%Y-%m")
+                    ts = first_data[idx]['ts']
+                    if period == '1D': t_str = ts.strftime("%H:%M")
+                    elif period == '1M': t_str = ts.strftime("%m-%d")
+                    else: t_str = ts.strftime("%Y-%m")
 
                     px = padding_left + (idx * x_step)
-                    
                     Line(points=[px, padding_bottom, px, h], dash_offset=4, dash_length=4)
-                    
-                    lbl = Label(
-                        text=t_str, 
-                        font_size='10sp', 
-                        color=(0.7, 0.7, 0.7, 1),
-                        size_hint=(None, None), 
-                        size=(dp(40), padding_bottom),
-                        pos=(px - dp(20), 0),
-                        halign='center', valign='middle'
-                    )
+                    lbl = Label(text=t_str, font_size='10sp', color=(0.5,0.5,0.5,1), size_hint=(None,None), pos=(px-dp(20), 0))
                     self.add_widget(lbl)
                     self.labels.append(lbl)
 
-            is_single_graph = len(data_map) == 1
-            
             for ex_name, data in data_map.items():
                 if not data: continue
                 
-                line_pts = []
                 c = EXCHANGE_COLORS.get(ex_name, DEFAULT_COLOR)
                 
-                if is_single_graph:
-                    Color(c[0], c[1], c[2], 0.2)
-                    vertices = []
-                    indices = []
-                    for i, d in enumerate(data):
-                        px = padding_left + (i * x_step)
-                        py_base = padding_bottom
-                        py_val = padding_bottom + ((d['price'] - base_y) / y_range * chart_h)
-                        
-                        vertices.extend([px, py_base, 0, 0])
-                        vertices.extend([px, py_val, 0, 0])
-                        
-                        if i < len(data) - 1:
-                            idx = i * 2
-                            indices.extend([idx, idx+1, idx+2, idx+1, idx+2, idx+3])
-                    Mesh(vertices=vertices, indices=indices, mode='triangles')
+                Color(c[0], c[1], c[2], 0.15)
+                vertices = []
+                indices = []
+                for i, d in enumerate(data):
+                    px = padding_left + (i * x_step)
+                    py_base = padding_bottom
+                    py_val = padding_bottom + ((d['price'] - base_y) / y_range * chart_h)
+                    
+                    vertices.extend([px, py_base, 0, 0])
+                    vertices.extend([px, py_val, 0, 0])
+                    
+                    if i < len(data) - 1:
+                        idx = i * 2
+                        indices.extend([idx, idx+1, idx+2, idx+1, idx+2, idx+3])
+                Mesh(vertices=vertices, indices=indices, mode='triangles')
 
+                line_pts = []
                 for i, d in enumerate(data):
                     px = padding_left + (i * x_step)
                     py = padding_bottom + ((d['price'] - base_y) / y_range * chart_h)
                     line_pts.extend([px, py])
                 
-                line_width = 1.5 if is_single_graph else 2.0
                 Color(c[0], c[1], c[2], 1)
-                Line(points=line_pts, width=line_width)
-
-                if not is_single_graph and line_pts:
-                    last_x = line_pts[-2]
-                    last_y = line_pts[-1]
-                    lbl = Label(
-                        text=ex_name,
-                        font_size='10sp',
-                        color=c,
-                        size_hint=(None, None),
-                        size=(dp(50), dp(20)),
-                        pos=(last_x - dp(50), last_y + dp(5))
-                    )
-                    self.add_widget(lbl)
-                    self.labels.append(lbl)
+                Line(points=line_pts, width=1.5)
