@@ -17,7 +17,7 @@ class PriceTrackerLayout(BoxLayout):
         self.selected_slot_key = None
         
         self.widget_map = {
-            f'slot_{i}': getattr(self.ids, f'slot_{i}') for i in range(5)
+            f'slot_{i}': getattr(self.ids, f'slot_{i}') for i in range(10)
         }
         self.k_premium_data = {'upbit': None, 'binance': None}
 
@@ -72,9 +72,9 @@ class PriceTrackerLayout(BoxLayout):
 
         self.active_targets = []
         self.selected_slot_key = None
-        keys = ['slot_0', 'slot_1', 'slot_2', 'slot_3', 'slot_4']
+        keys = [f'slot_{i}' for i in range(10)]
         
-        for i, item in enumerate(selected_items[:5]):
+        for i, item in enumerate(selected_items[:10]):
             target_exchange = item.get('exchange', exchange_name_ignored)
             self.active_targets.append({
                 'key': keys[i],
@@ -95,9 +95,8 @@ class PriceTrackerLayout(BoxLayout):
     async def start_tracking_loop(self):
         try:
             while True:
-                self.set_all_loading()
                 await self.fetch_and_update()
-                await asyncio.sleep(5)
+                await asyncio.sleep(60) 
         except asyncio.CancelledError:
             print("Tracking loop stopped.")
         except Exception as e:

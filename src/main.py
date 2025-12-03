@@ -8,6 +8,7 @@ from services.price_service import PriceService
 from ui.tracker_layout import PriceTrackerLayout
 from ui.market_explorer import MarketExplorer
 
+# TODO: 보안 이슈 확인하고 개선하기
 class ExplorerScreen(Screen):
     def __init__(self, price_service, **kwargs):
         super().__init__(**kwargs)
@@ -30,8 +31,7 @@ class TrackerScreen(Screen):
 
 class BitAnalyzerApp(App):
     def build(self):
-        Window.size = (550, 800)
-        
+        Window.size = (1400, 900)
         try:
             self.price_service = PriceService()
         except Exception as e:
@@ -47,8 +47,7 @@ class BitAnalyzerApp(App):
         return self.sm
 
     def switch_to_tracker(self, exchange_name, selected_items):
-        print(f"Switching to Tracker with: {selected_items}")
-        
+        print(f"Switching to Tracker with: {len(selected_items)} items")
         self.tracker_screen.update_targets(exchange_name, selected_items)
         self.sm.transition.direction = 'left'
         self.sm.current = 'tracker'
@@ -62,8 +61,10 @@ if __name__ == '__main__':
     Builder.load_file('src/ui/tracker_layout.kv')
     Builder.load_file('src/ui/market_explorer.kv')
 
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
     app = BitAnalyzerApp()
-    loop = asyncio.get_event_loop()
     
     try:
         loop.run_until_complete(app.async_run())

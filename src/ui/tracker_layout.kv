@@ -32,23 +32,43 @@
             OrderBookWidget:
                 id: slot_0
                 size_hint_x: None
-                width: dp(300)
+                width: dp(280)
             OrderBookWidget:
                 id: slot_1
                 size_hint_x: None
-                width: dp(300)
+                width: dp(280)
             OrderBookWidget:
                 id: slot_2
                 size_hint_x: None
-                width: dp(300)
+                width: dp(280)
             OrderBookWidget:
                 id: slot_3
                 size_hint_x: None
-                width: dp(300)
+                width: dp(280)
             OrderBookWidget:
                 id: slot_4
                 size_hint_x: None
-                width: dp(300)
+                width: dp(280)
+            OrderBookWidget:
+                id: slot_5
+                size_hint_x: None
+                width: dp(280)
+            OrderBookWidget:
+                id: slot_6
+                size_hint_x: None
+                width: dp(280)
+            OrderBookWidget:
+                id: slot_7
+                size_hint_x: None
+                width: dp(280)
+            OrderBookWidget:
+                id: slot_8
+                size_hint_x: None
+                width: dp(280)
+            OrderBookWidget:
+                id: slot_9
+                size_hint_x: None
+                width: dp(280)
 
     BoxLayout:
         orientation: 'vertical'
@@ -66,7 +86,7 @@
             size_hint_y: 0.4
 
         Button:
-            text: "Show Trend Graph"
+            text: "Show Arbitrage Graph (Bid/Ask)"
             size_hint_y: 0.3
             background_color: (0.2, 0.6, 1, 1)
             on_release: root.open_trend_popup()
