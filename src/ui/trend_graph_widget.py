@@ -6,7 +6,7 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.uix.togglebutton import ToggleButton
 from kivy.uix.modalview import ModalView
-from kivy.graphics import Color, Line, Rectangle
+from kivy.graphics import Color, Line, Rectangle, ScissorPush, ScissorPop
 from kivy.metrics import dp
 from kivy.app import App
 
@@ -51,7 +51,7 @@ class DetailGraphPopup(ModalView):
             t_base = t['symbol'].split('/')[0]
             if t['exchange'] != exchange and t_base == current_base:
                 self.compare_targets.append(t)
-
+        
         main_layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(5))
         
         header = BoxLayout(size_hint_y=None, height=dp(40))
@@ -178,8 +178,10 @@ class TrendGraphWidget(BoxLayout):
         if not self.raw_data_map: return
 
         visible_data = {}
-        all_prices = []
         info_texts = []
+        
+        main_prices = [] 
+        all_prices = []
 
         for ex_name in self.active_exchanges:
             if ex_name not in self.raw_data_map: continue
@@ -207,6 +209,12 @@ class TrendGraphWidget(BoxLayout):
                     o_p /= self.current_rate
 
                 norm_api.append({'ts': ts, 'o': o_p, 'h': h_p, 'l': l_p, 'c': c_p})
+                
+                # 메인 거래소 가격 별도 수집
+                if ex_name == self.main_exchange:
+                    main_prices.append(h_p)
+                    main_prices.append(l_p)
+                
                 all_prices.append(h_p)
                 all_prices.append(l_p)
 
@@ -233,14 +241,21 @@ class TrendGraphWidget(BoxLayout):
                 hex_col = "".join([f"{int(c*255):02x}" for c in ex_color[:3]])
                 info_texts.append(f"[color={hex_col}]{ex_name}[/color] [b]${last_p:,.2f}[/b]")
 
-        if not all_prices:
+        if not visible_data:
             self.info_lbl.text = "No Data Available"
             self.canvas_area.clear_graph()
             return
 
-        p_max = max(all_prices)
-        p_min = min(all_prices)
-        
+        if main_prices:
+            p_max = max(main_prices)
+            p_min = min(main_prices)
+        elif all_prices:
+            p_max = max(all_prices)
+            p_min = min(all_prices)
+        else:
+            p_max = 1
+            p_min = 0
+
         all_spreads = [d['spread'] for v in visible_data.values() for d in v['db']]
         s_max = max(all_spreads) if all_spreads else 0
 
@@ -283,19 +298,31 @@ class GraphCanvas(RelativeLayout):
         
         h_price_actual = h - y_price_start - PAD_T
 
-        ts_list = [d['ts'] for v in data_map.values() for d in v['api']]
-        if not ts_list: return
-        start_ts, end_ts = min(ts_list), max(ts_list)
-        time_span = end_ts - start_ts or 1
+        now_kst = datetime.now(timezone.utc).astimezone(KST)
+        end_ts = now_kst.timestamp()
+        
+        if period == '1D':
+            time_span_sec = 24 * 3600
+        elif period == '1M':
+            time_span_sec = 30 * 24 * 3600
+        elif period == '3M':
+            time_span_sec = 90 * 24 * 3600
+        elif period == '1Y':
+            time_span_sec = 365 * 24 * 3600
+        else:
+            time_span_sec = 24 * 3600
+            
+        start_ts = end_ts - time_span_sec
+        time_span = end_ts - start_ts
 
         p_diff = p_max - p_min
+        if p_diff == 0: p_diff = 1
         p_base = p_min - (p_diff * 0.05)
-        p_range = (p_diff * 1.1) or 1
+        p_range = (p_diff * 1.1)
         s_range = s_max * 1.2 if s_max > 0 else 1
 
         with self.canvas:
             Color(*COLOR_GRID)
-            
             steps = 5
             for i in range(steps):
                 ratio = i / (steps - 1)
@@ -323,6 +350,19 @@ class GraphCanvas(RelativeLayout):
             Color(0.5, 0.5, 0.5, 0.5)
             Line(points=[0, y_spread_start + h_spread, chart_w, y_spread_start + h_spread], width=1)
 
+            spread_lbl = Label(
+                text="Spread (Ask-Bid)", 
+                font_size='10sp', 
+                color=(0.6, 0.6, 0.7, 1),
+                size_hint=(None, None), 
+                size=(dp(100), dp(20)),
+                pos=(dp(5), y_spread_start + h_spread - dp(20)),
+                halign='left', 
+                valign='middle'
+            )
+            self.add_widget(spread_lbl)
+            self.labels.append(spread_lbl)
+
             for ex_name, data in data_map.items():
                 is_main = (ex_name == self.main_exchange)
                 
@@ -331,28 +371,36 @@ class GraphCanvas(RelativeLayout):
                     else: Color(0.3, 0.3, 0.3, 0.2)
                     
                     for d in data['db']:
+                        if d['ts'] < start_ts or d['ts'] > end_ts: continue
+                        
                         x_ratio = (d['ts'] - start_ts) / time_span
-                        if 0 <= x_ratio <= 1:
-                            px = x_ratio * chart_w
-                            bar_h = (d['spread'] / s_range) * h_spread
-                            Line(points=[px, y_spread_start, px, y_spread_start + bar_h], width=1.1)
+                        px = x_ratio * chart_w
+                        
+                        bar_h = min((d['spread'] / s_range) * h_spread, h_spread)
+                        Line(points=[px, y_spread_start, px, y_spread_start + bar_h], width=1.1)
 
                 api_data = data['api']
                 if not api_data: continue
 
+                def get_clamped_y(val):
+                    rel = (val - p_base) / p_range
+                    y = y_price_start + (rel * h_price_actual)
+                    return max(y_price_start, min(y, y_price_start + h_price_actual))
+
                 if is_main:
-                    candle_width = (chart_w / len(api_data)) * 0.7
+                    candle_width = (chart_w / (len(api_data) + 1)) * 0.7
                     if candle_width < 1: candle_width = 1.0
                     
                     for d in api_data:
+                        if d['ts'] < start_ts or d['ts'] > end_ts: continue
+
                         x_ratio = (d['ts'] - start_ts) / time_span
-                        if not (0 <= x_ratio <= 1): continue
-                        
                         cx = x_ratio * chart_w
-                        y_o = y_price_start + ((d['o'] - p_base) / p_range * h_price_actual)
-                        y_c = y_price_start + ((d['c'] - p_base) / p_range * h_price_actual)
-                        y_h = y_price_start + ((d['h'] - p_base) / p_range * h_price_actual)
-                        y_l = y_price_start + ((d['l'] - p_base) / p_range * h_price_actual)
+                        
+                        y_o = get_clamped_y(d['o'])
+                        y_c = get_clamped_y(d['c'])
+                        y_h = get_clamped_y(d['h'])
+                        y_l = get_clamped_y(d['l'])
 
                         is_up = d['c'] >= d['o']
                         Color(*(COLOR_UP if is_up else COLOR_DOWN))
@@ -366,11 +414,13 @@ class GraphCanvas(RelativeLayout):
                     Color(*c_line)
                     pts = []
                     for d in api_data:
+                        if d['ts'] < start_ts or d['ts'] > end_ts: continue
+
                         x_ratio = (d['ts'] - start_ts) / time_span
-                        if 0 <= x_ratio <= 1:
-                            px = x_ratio * chart_w
-                            py = y_price_start + ((d['c'] - p_base) / p_range * h_price_actual)
-                            pts.extend([px, py])
+                        px = x_ratio * chart_w
+                        py = get_clamped_y(d['c'])
+                        
+                        pts.extend([px, py])
                     if pts:
                         Line(points=pts, width=1.2)
 
