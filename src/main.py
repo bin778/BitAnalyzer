@@ -32,6 +32,7 @@ class TrackerScreen(Screen):
 class BitAnalyzerApp(App):
     def build(self):
         Window.size = (1400, 900)
+        
         try:
             self.price_service = PriceService()
         except Exception as e:
@@ -47,7 +48,6 @@ class BitAnalyzerApp(App):
         return self.sm
 
     def switch_to_tracker(self, exchange_name, selected_items):
-        print(f"Switching to Tracker with: {len(selected_items)} items")
         self.tracker_screen.update_targets(exchange_name, selected_items)
         self.sm.transition.direction = 'left'
         self.sm.current = 'tracker'
