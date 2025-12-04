@@ -1,23 +1,23 @@
 import asyncio
+from datetime import datetime
 from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Line
+
 from services.analysis_service import calculate_k_premium
-from services.database_service import DatabaseService
 from ui.trend_graph_widget import DetailGraphPopup
-from datetime import datetime
 
 class PriceTrackerLayout(BoxLayout):
-    def __init__(self, price_service, **kwargs):
+    def __init__(self, price_service, db_service=None, **kwargs):
         super().__init__(**kwargs)
         self.price_service = price_service
-        self.db_service = DatabaseService()
+        self.db_service = db_service
         
         self.tracking_task = None
         self.active_targets = []
         self.selected_slot_key = None
         
         self.widget_map = {
-            f'slot_{i}': getattr(self.ids, f'slot_{i}') for i in range(5)
+            f'slot_{i}': getattr(self.ids, f'slot_{i}') for i in range(10)
         }
         self.k_premium_data = {'upbit': None, 'binance': None}
 
@@ -47,10 +47,14 @@ class PriceTrackerLayout(BoxLayout):
             self.show_popup(target)
 
     def show_popup(self, target):
+        if not self.db_service:
+            print("DB Service is not available.")
+            return
+
         popup = DetailGraphPopup(
-            self.db_service, 
-            target['exchange'], 
-            target['symbol']
+            db_service=self.db_service, 
+            exchange=target['exchange'], 
+            symbol=target['symbol']
         )
         popup.open()
 
@@ -72,9 +76,9 @@ class PriceTrackerLayout(BoxLayout):
 
         self.active_targets = []
         self.selected_slot_key = None
-        keys = ['slot_0', 'slot_1', 'slot_2', 'slot_3', 'slot_4']
+        keys = [f'slot_{i}' for i in range(10)]
         
-        for i, item in enumerate(selected_items[:5]):
+        for i, item in enumerate(selected_items[:10]):
             target_exchange = item.get('exchange', exchange_name_ignored)
             self.active_targets.append({
                 'key': keys[i],
@@ -83,6 +87,7 @@ class PriceTrackerLayout(BoxLayout):
             })
             
         active_keys = [t['key'] for t in self.active_targets]
+        
         for key, widget in self.widget_map.items():
             widget.canvas.after.clear()
             if key not in active_keys:
@@ -95,9 +100,8 @@ class PriceTrackerLayout(BoxLayout):
     async def start_tracking_loop(self):
         try:
             while True:
-                self.set_all_loading()
                 await self.fetch_and_update()
-                await asyncio.sleep(5)
+                await asyncio.sleep(1)
         except asyncio.CancelledError:
             print("Tracking loop stopped.")
         except Exception as e:
@@ -161,16 +165,16 @@ class PriceTrackerLayout(BoxLayout):
                     best_bid = bids[0][0] if bids else 0
                     best_ask = asks[0][0] if asks else 0
                     
-                    try:
-                        self.db_service.save_ticker(
-                            target['exchange'], 
-                            target['symbol'], 
-                            last_price, 
-                            best_bid, 
-                            best_ask
-                        )
-                    except Exception as e:
-                        print(f"DB Save Error: {e}")
+                    if self.db_service:
+                        try:
+                            self.db_service.save_spread(
+                                target['exchange'], 
+                                target['symbol'], 
+                                best_bid, 
+                                best_ask
+                            )
+                        except Exception as e:
+                            print(f"DB Save Error: {e}")
 
                 if 'KRW' in target['symbol']:
                     if self.k_premium_data['upbit'] is None:
