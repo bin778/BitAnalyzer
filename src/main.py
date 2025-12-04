@@ -5,6 +5,7 @@ from kivy.uix.screenmanager import ScreenManager, Screen, SlideTransition
 from kivy.lang import Builder
 
 from services.price_service import PriceService
+from services.database_service import DatabaseService
 from ui.tracker_layout import PriceTrackerLayout
 from ui.market_explorer import MarketExplorer
 
@@ -21,9 +22,9 @@ class ExplorerScreen(Screen):
             self.layout.reset_selection()
 
 class TrackerScreen(Screen):
-    def __init__(self, price_service, **kwargs):
+    def __init__(self, price_service, db_service, **kwargs):
         super().__init__(**kwargs)
-        self.layout = PriceTrackerLayout(price_service=price_service)
+        self.layout = PriceTrackerLayout(price_service=price_service, db_service=db_service)
         self.add_widget(self.layout)
     
     def update_targets(self, exchange, selected_items):
@@ -38,10 +39,18 @@ class BitAnalyzerApp(App):
         except Exception as e:
             print(f"Service Init Error: {e}")
             return None
+            
+        self.db_service = DatabaseService()
 
         self.sm = ScreenManager(transition=SlideTransition())
         self.explorer_screen = ExplorerScreen(name='explorer', price_service=self.price_service)
-        self.tracker_screen = TrackerScreen(name='tracker', price_service=self.price_service)
+        
+        self.tracker_screen = TrackerScreen(
+            name='tracker', 
+            price_service=self.price_service,
+            db_service=self.db_service
+        )
+        
         self.sm.add_widget(self.explorer_screen)
         self.sm.add_widget(self.tracker_screen)
 
@@ -57,9 +66,12 @@ class BitAnalyzerApp(App):
         self.sm.current = 'explorer'
 
 if __name__ == '__main__':
-    Builder.load_file('src/ui/order_book_widget.kv')
-    Builder.load_file('src/ui/tracker_layout.kv')
-    Builder.load_file('src/ui/market_explorer.kv')
+    try:
+        Builder.load_file('src/ui/order_book_widget.kv')
+        Builder.load_file('src/ui/tracker_layout.kv')
+        Builder.load_file('src/ui/market_explorer.kv')
+    except:
+        pass
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

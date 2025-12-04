@@ -15,7 +15,7 @@ COLOR_GRID = (0.3, 0.3, 0.35, 0.5)
 COLOR_TEXT = (0.85, 0.85, 0.85, 1)
 COLOR_UP = (0.1, 0.85, 0.5, 1)
 COLOR_DOWN = (1.0, 0.3, 0.35, 1)
-COLOR_SPREAD = (0.3, 0.4, 0.5, 0.3)
+COLOR_SPREAD = (0.4, 0.5, 0.6, 0.5)
 
 KST = timezone(timedelta(hours=9))
 
@@ -42,16 +42,18 @@ class DetailGraphPopup(ModalView):
         self.symbol = symbol
 
         app = App.get_running_app()
-        tracker_layout = app.root.get_screen('tracker').layout
-        
-        self.compare_targets = [{'exchange': exchange, 'symbol': symbol}]
-        
-        current_base = symbol.split('/')[0]
-        for t in tracker_layout.active_targets:
-            t_base = t['symbol'].split('/')[0]
-            if t['exchange'] != exchange and t_base == current_base:
-                self.compare_targets.append(t)
-        
+        try:
+            tracker_layout = app.root.get_screen('tracker').layout
+            self.compare_targets = [{'exchange': exchange, 'symbol': symbol}]
+            
+            current_base = symbol.split('/')[0]
+            for t in tracker_layout.active_targets:
+                t_base = t['symbol'].split('/')[0]
+                if t['exchange'] != exchange and t_base == current_base:
+                    self.compare_targets.append(t)
+        except:
+            self.compare_targets = [{'exchange': exchange, 'symbol': symbol}]
+
         main_layout = BoxLayout(orientation='vertical', padding=dp(10), spacing=dp(5))
         
         header = BoxLayout(size_hint_y=None, height=dp(40))
@@ -118,9 +120,11 @@ class DetailGraphPopup(ModalView):
             combined_data = {}
             for i, target in enumerate(self.compare_targets):
                 ex_name = target['exchange']
+                
                 db_history = await loop.run_in_executor(
-                    None, self.db_service.get_price_history, ex_name, target['symbol'], period
+                    None, self.db_service.get_spread_history, ex_name, target['symbol'], period
                 )
+                
                 combined_data[ex_name] = {
                     'symbol': target['symbol'],
                     'api': api_results[i], 
@@ -130,6 +134,8 @@ class DetailGraphPopup(ModalView):
             self.graph_widget.update_graph(combined_data, period, self.usdt_krw_rate)
         except Exception as e:
             print(f"Graph Load Error: {e}")
+            import traceback
+            traceback.print_exc()
             self.graph_widget.info_lbl.text = f"Error: {str(e)}"
 
 class TrendGraphWidget(BoxLayout):
@@ -193,8 +199,16 @@ class TrendGraphWidget(BoxLayout):
             prev_close = None
             
             for h in raw_entry['api']:
-                ts = h['ts'].timestamp() if isinstance(h['ts'], datetime) else float(h['ts'])
-                if ts > 3000000000: ts /= 1000 
+                if isinstance(h['ts'], datetime):
+                    if h['ts'].tzinfo is None:
+                        ts_obj = h['ts'].replace(tzinfo=timezone.utc)
+                    else:
+                        ts_obj = h['ts']
+                    ts = ts_obj.astimezone(KST).timestamp()
+                else:
+                    ts_val = float(h['ts'])
+                    if ts_val > 3000000000: ts_val /= 1000
+                    ts = datetime.fromtimestamp(ts_val, timezone.utc).astimezone(KST).timestamp()
 
                 c_p = h['price']
                 h_p = h.get('high', c_p)
@@ -210,28 +224,36 @@ class TrendGraphWidget(BoxLayout):
 
                 norm_api.append({'ts': ts, 'o': o_p, 'h': h_p, 'l': l_p, 'c': c_p})
                 
-                # 메인 거래소 가격 별도 수집
                 if ex_name == self.main_exchange:
                     main_prices.append(h_p)
                     main_prices.append(l_p)
-                
                 all_prices.append(h_p)
                 all_prices.append(l_p)
 
             norm_db = []
-            for d in raw_entry['db']:
-                ts = d['ts'].timestamp() if isinstance(d['ts'], datetime) else float(d['ts'])
-                if ts > 3000000000: ts /= 1000
-                
-                bid = d.get('bid', 0)
-                ask = d.get('ask', 0)
-                if is_krw:
-                    bid /= self.current_rate
-                    ask /= self.current_rate
-                
-                spread = ask - bid if (ask > 0 and bid > 0) else 0
-                if spread > 0:
-                    norm_db.append({'ts': ts, 'spread': spread})
+            if raw_entry.get('db'):
+                for d in raw_entry['db']:
+                    if isinstance(d['ts'], datetime):
+                        if d['ts'].tzinfo is None:
+                            d_ts_obj = d['ts'].replace(tzinfo=timezone.utc)
+                        else:
+                            d_ts_obj = d['ts']
+                        ts = d_ts_obj.astimezone(KST).timestamp()
+                    else:
+                        ts_val = float(d['ts'])
+                        if ts_val > 3000000000: ts_val /= 1000
+                        ts = datetime.fromtimestamp(ts_val, timezone.utc).astimezone(KST).timestamp()
+
+                    bid = d.get('bid', 0)
+                    ask = d.get('ask', 0)
+                    if is_krw:
+                        bid /= self.current_rate
+                        ask /= self.current_rate
+                    
+                    spread = ask - bid if (ask > 0 and bid > 0) else 0
+                    
+                    if spread > 0:
+                        norm_db.append({'ts': ts, 'spread': spread})
 
             visible_data[ex_name] = {'api': norm_api, 'db': norm_db}
 
@@ -319,6 +341,7 @@ class GraphCanvas(RelativeLayout):
         if p_diff == 0: p_diff = 1
         p_base = p_min - (p_diff * 0.05)
         p_range = (p_diff * 1.1)
+        
         s_range = s_max * 1.2 if s_max > 0 else 1
 
         with self.canvas:
@@ -351,11 +374,11 @@ class GraphCanvas(RelativeLayout):
             Line(points=[0, y_spread_start + h_spread, chart_w, y_spread_start + h_spread], width=1)
 
             spread_lbl = Label(
-                text="Spread (Ask-Bid)", 
+                text=f"Spread (Max: {s_max:.2f})", 
                 font_size='10sp', 
                 color=(0.6, 0.6, 0.7, 1),
                 size_hint=(None, None), 
-                size=(dp(100), dp(20)),
+                size=(dp(120), dp(20)),
                 pos=(dp(5), y_spread_start + h_spread - dp(20)),
                 halign='left', 
                 valign='middle'
@@ -366,18 +389,25 @@ class GraphCanvas(RelativeLayout):
             for ex_name, data in data_map.items():
                 is_main = (ex_name == self.main_exchange)
                 
-                if data['db']:
-                    if is_main: Color(*COLOR_SPREAD)
-                    else: Color(0.3, 0.3, 0.3, 0.2)
+                if data.get('db'):
+                    if is_main: 
+                        Color(*COLOR_SPREAD)
+                    else: 
+                        Color(0.3, 0.3, 0.3, 0.1)
                     
                     for d in data['db']:
-                        if d['ts'] < start_ts or d['ts'] > end_ts: continue
+                        if d['ts'] < start_ts or d['ts'] > end_ts + 600:
+                            continue
                         
                         x_ratio = (d['ts'] - start_ts) / time_span
+                        if x_ratio < 0 or x_ratio > 1: continue
+
                         px = x_ratio * chart_w
                         
                         bar_h = min((d['spread'] / s_range) * h_spread, h_spread)
-                        Line(points=[px, y_spread_start, px, y_spread_start + bar_h], width=1.1)
+                        if bar_h < 1: bar_h = 1
+                        
+                        Line(points=[px, y_spread_start, px, y_spread_start + bar_h], width=1.2)
 
                 api_data = data['api']
                 if not api_data: continue
@@ -390,6 +420,7 @@ class GraphCanvas(RelativeLayout):
                 if is_main:
                     candle_width = (chart_w / (len(api_data) + 1)) * 0.7
                     if candle_width < 1: candle_width = 1.0
+                    if candle_width > 10: candle_width = 10.0
                     
                     for d in api_data:
                         if d['ts'] < start_ts or d['ts'] > end_ts: continue
@@ -404,8 +435,8 @@ class GraphCanvas(RelativeLayout):
 
                         is_up = d['c'] >= d['o']
                         Color(*(COLOR_UP if is_up else COLOR_DOWN))
-
                         Line(points=[cx, y_l, cx, y_h], width=1)
+                        
                         rect_h = abs(y_c - y_o)
                         if rect_h < 1: rect_h = 1
                         Rectangle(pos=(cx - candle_width/2, min(y_o, y_c)), size=(candle_width, rect_h))

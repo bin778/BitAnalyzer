@@ -18,7 +18,7 @@ class DatabaseService:
         load_dotenv()
         
         host = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
-        db_name = os.getenv("MONGO_DB_NAME", "bitanalyzer_db")
+        db_name = os.getenv("MONGO_DB_NAME") 
         user = os.getenv("MONGO_USER")
         password = os.getenv("MONGO_PASSWORD")
 
@@ -26,7 +26,6 @@ class DatabaseService:
             if user and password:
                 username = urllib.parse.quote_plus(user)
                 pwd = urllib.parse.quote_plus(password)
-                
                 if "mongodb://" in host:
                     connection_string = host.replace("mongodb://", f"mongodb://{username}:{pwd}@")
                 else:
@@ -36,38 +35,43 @@ class DatabaseService:
 
             self.client = MongoClient(connection_string, serverSelectionTimeoutMS=2000)
             self.db = self.client[db_name]
-            self.collection = self.db["market_tickers"]
+            
+            self.spread_col = self.db["spread_history"]
             
             try:
-                self.collection.create_index("timestamp", expireAfterSeconds=31536000)
+                self.spread_col.create_index("timestamp", expireAfterSeconds=604800)
             except:
                 pass
-                
-            self.collection.create_index([("symbol", ASCENDING), ("exchange", ASCENDING), ("timestamp", DESCENDING)])
-            print("✅ MongoDB Connected Successfully.")
+            
+            self.spread_col.create_index([("exchange", ASCENDING), ("symbol", ASCENDING), ("timestamp", DESCENDING)])
+            
+            print(f"✅ MongoDB Connected to '{db_name}'. Collection: 'spread_history'")
             
         except Exception as e:
             print(f"❌ MongoDB Connection Error: {e}")
             self.enabled = False
 
-    def save_ticker(self, exchange, symbol, price, best_bid, best_ask):
+    def save_spread(self, exchange, symbol, best_bid, best_ask):
         if not self.enabled: return
+
+        if best_bid <= 0 or best_ask <= 0:
+            return
 
         data = {
             "exchange": exchange,
             "symbol": symbol,
-            "price": float(price),
-            "best_bid": float(best_bid) if best_bid else 0,
-            "best_ask": float(best_ask) if best_ask else 0,
+            "bid": float(best_bid),
+            "ask": float(best_ask),
+            "spread": float(best_ask - best_bid),
             "timestamp": datetime.now(timezone.utc)
         }
         
         try:
-            self.collection.insert_one(data)
+            self.spread_col.insert_one(data)
         except Exception as e:
             print(f"DB Save Error: {e}")
 
-    def get_price_history(self, exchange, symbol, period_code):
+    def get_spread_history(self, exchange, symbol, period_code):
         if not self.enabled: return []
 
         now = datetime.now(timezone.utc)
@@ -81,6 +85,8 @@ class DatabaseService:
             start_time = now - timedelta(days=90)
         elif period_code == '1Y':
             start_time = now - timedelta(days=365)
+        else:
+            start_time = now - timedelta(hours=24)
 
         query = {
             "exchange": exchange,
@@ -88,15 +94,15 @@ class DatabaseService:
             "timestamp": {"$gte": start_time}
         }
 
-        cursor = self.collection.find(query).sort("timestamp", ASCENDING).limit(1000)
+        cursor = self.spread_col.find(query).sort("timestamp", ASCENDING).limit(3000)
         
         history = []
         for doc in cursor:
             history.append({
                 'ts': doc['timestamp'],
-                'price': doc['price'],
-                'bid': doc.get('best_bid', 0),
-                'ask': doc.get('best_ask', 0)
+                'bid': doc.get('bid', 0),
+                'ask': doc.get('ask', 0),
+                'spread': doc.get('spread', 0)
             })
             
         return history

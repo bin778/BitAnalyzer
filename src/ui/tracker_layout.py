@@ -1,16 +1,16 @@
 import asyncio
+from datetime import datetime
 from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Line
+
 from services.analysis_service import calculate_k_premium
-from services.database_service import DatabaseService
 from ui.trend_graph_widget import DetailGraphPopup
-from datetime import datetime
 
 class PriceTrackerLayout(BoxLayout):
-    def __init__(self, price_service, **kwargs):
+    def __init__(self, price_service, db_service=None, **kwargs):
         super().__init__(**kwargs)
         self.price_service = price_service
-        self.db_service = DatabaseService()
+        self.db_service = db_service
         
         self.tracking_task = None
         self.active_targets = []
@@ -47,10 +47,14 @@ class PriceTrackerLayout(BoxLayout):
             self.show_popup(target)
 
     def show_popup(self, target):
+        if not self.db_service:
+            print("DB Service is not available.")
+            return
+
         popup = DetailGraphPopup(
-            self.db_service, 
-            target['exchange'], 
-            target['symbol']
+            db_service=self.db_service, 
+            exchange=target['exchange'], 
+            symbol=target['symbol']
         )
         popup.open()
 
@@ -83,6 +87,7 @@ class PriceTrackerLayout(BoxLayout):
             })
             
         active_keys = [t['key'] for t in self.active_targets]
+        
         for key, widget in self.widget_map.items():
             widget.canvas.after.clear()
             if key not in active_keys:
@@ -96,7 +101,7 @@ class PriceTrackerLayout(BoxLayout):
         try:
             while True:
                 await self.fetch_and_update()
-                await asyncio.sleep(60) 
+                await asyncio.sleep(1)
         except asyncio.CancelledError:
             print("Tracking loop stopped.")
         except Exception as e:
@@ -160,16 +165,16 @@ class PriceTrackerLayout(BoxLayout):
                     best_bid = bids[0][0] if bids else 0
                     best_ask = asks[0][0] if asks else 0
                     
-                    try:
-                        self.db_service.save_ticker(
-                            target['exchange'], 
-                            target['symbol'], 
-                            last_price, 
-                            best_bid, 
-                            best_ask
-                        )
-                    except Exception as e:
-                        print(f"DB Save Error: {e}")
+                    if self.db_service:
+                        try:
+                            self.db_service.save_spread(
+                                target['exchange'], 
+                                target['symbol'], 
+                                best_bid, 
+                                best_ask
+                            )
+                        except Exception as e:
+                            print(f"DB Save Error: {e}")
 
                 if 'KRW' in target['symbol']:
                     if self.k_premium_data['upbit'] is None:
