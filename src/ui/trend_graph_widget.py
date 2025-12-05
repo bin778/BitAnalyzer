@@ -46,7 +46,8 @@ class DetailGraphPopup(ModalView):
         
         self.update_task = None
         self.is_open = True
-        self.current_period = '1D'
+        
+        self.current_period = '1H'
 
         app = App.get_running_app()
         try:
@@ -85,7 +86,7 @@ class DetailGraphPopup(ModalView):
         main_layout.add_widget(graph_wrapper)
 
         btn_box = BoxLayout(size_hint_y=None, height=dp(30), spacing=dp(2))
-        for p in ['1D', '1M', '3M', '1Y']:
+        for p in ['1H', '1D', '1M', '3M', '1Y']:
             btn = Button(text=p, background_normal='', background_color=(0.15, 0.15, 0.2, 1),
                         color=COLOR_TEXT, font_size='13sp')
             btn.bind(on_release=lambda x, period=p: self.change_period(period))
@@ -95,6 +96,7 @@ class DetailGraphPopup(ModalView):
         self.add_widget(main_layout)
         self.init_toggles()
         
+        self.trigger_load(self.current_period)
         self.start_auto_refresh()
 
     def init_toggles(self):
@@ -117,15 +119,16 @@ class DetailGraphPopup(ModalView):
         self.current_period = period
         self.graph_widget.set_loading()
 
+    def trigger_load(self, period):
+        asyncio.create_task(self.load_data_async(period, silent=False))
+
     def start_auto_refresh(self):
         self.update_task = asyncio.create_task(self.auto_refresh_loop())
 
     async def auto_refresh_loop(self):
-        first_load = True
         while self.is_open:
             try:
-                await self.load_data_async(self.current_period, silent=not first_load)
-                first_load = False
+                await self.load_data_async(self.current_period, silent=True)
             except Exception as e:
                 print(f"Auto refresh error: {e}")
             
@@ -206,7 +209,10 @@ class TrendGraphWidget(BoxLayout):
         self.raw_data_map = data_map
         self.current_period = period
         self.current_rate = rate
-        self.active_exchanges = set(data_map.keys())
+        
+        if not self.active_exchanges:
+            self.active_exchanges = set(data_map.keys())
+            
         self.redraw_with_filter()
 
     def redraw_with_filter(self):
@@ -337,7 +343,13 @@ class GraphCanvas(RelativeLayout):
         now_kst = datetime.now(timezone.utc).astimezone(KST)
         end_ts = now_kst.timestamp()
         
-        time_span_map = {'1D': 86400, '1M': 2592000, '3M': 7776000, '1Y': 31536000}
+        time_span_map = {
+            '1H': 3600,
+            '1D': 86400,
+            '1M': 2592000,
+            '3M': 7776000,
+            '1Y': 31536000
+        }
         time_span_sec = time_span_map.get(period, 86400)
         start_ts = end_ts - time_span_sec
         time_span = end_ts - start_ts
@@ -413,7 +425,11 @@ class GraphCanvas(RelativeLayout):
                 if not api_data: continue
 
                 if is_main:
-                    candle_width = max(1.0, min((chart_w / (len(api_data) + 1)) * 0.7, 10.0))
+                    base_width = 1.0
+                    if period == '1H': base_width = 2.0
+                    
+                    candle_width = max(base_width, min((chart_w / (len(api_data) + 1)) * 0.7, 10.0))
+                    
                     for d in api_data:
                         if d['ts'] < start_ts or d['ts'] > end_ts: continue
                         cx = ((d['ts'] - start_ts) / time_span) * chart_w
@@ -437,7 +453,13 @@ class GraphCanvas(RelativeLayout):
             for i in range(5):
                 ratio = i / 4
                 ts_val = start_ts + (time_span * ratio)
-                t_str = datetime.fromtimestamp(ts_val, KST).strftime("%H:%M" if period == '1D' else "%m-%d")
+                dt_obj = datetime.fromtimestamp(ts_val, KST)
+                
+                if period in ['1H', '1D']:
+                    t_str = dt_obj.strftime("%H:%M")
+                else:
+                    t_str = dt_obj.strftime("%m-%d")
+                    
                 px = chart_w * ratio
                 
                 Color(0.2, 0.2, 0.2, 0.3)
