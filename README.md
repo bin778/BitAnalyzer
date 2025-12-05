@@ -9,13 +9,16 @@ Binance, Upbit, Bybit 등 주요 거래소의 시세를 실시간으로 비교�
 ## 📸 스크린샷
 
 ### 1. 코인 목록 선택
-<img width="1512" height="949" alt="스크린샷 2025-12-04 오후 4 21 37" src="https://github.com/user-attachments/assets/8ffc6725-025d-4642-88a0-87473adb82d8" />
+<img width="1512" height="949" src="https://github.com/user-attachments/assets/cb125b78-158e-412a-88f5-6292dc078899" />
 
 ### 2. 코인 시세/호가 확인
-<img width="1512" height="949" alt="스크린샷 2025-12-04 오후 4 13 19" src="https://github.com/user-attachments/assets/87ad2b75-fd4d-4059-840d-60826e6c11f9" />
+<img width="1512" height="949" src="https://github.com/user-attachments/assets/2eb77715-9800-4c92-bffe-fc599d892ecd" />
 
 ### 3. 코인 추세선 그래프 확인
-<img width="1512" height="949" alt="스크린샷 2025-12-04 오후 4 21 13" src="https://github.com/user-attachments/assets/43f7cde7-8e60-4588-9091-a5256f9c573d" />
+
+<img width="1512" height="949" src="https://github.com/user-attachments/assets/28938e41-19ae-451c-a8f7-86b1896bbf56" />
+
+<img width="1512" height="949" src="https://github.com/user-attachments/assets/5ae18f46-84ce-408c-9df1-9a70b4b37b03" />
 
 ---
 
@@ -27,7 +30,7 @@ Binance, Upbit, Bybit 등 주요 거래소의 시세를 실시간으로 비교�
 * **자동 갱신**: 5초 주기로 데이터 자동 업데이트 및 갱신 시각(Timestamp) 표시
 
 ### 2. 시장 심리 분석
-* **호가창(Order Book) 분석**: 매수/매도 잔량을 비교하여 현재 시장의 추세(Strong Buy/Sell Pressure)를 텍스트와 색상으로 시각화
+* **호가창(Order Book) 분석**: 매수/매도 호가 및 시세를 비교하여 현재 시장의 추세(Strong Buy/Sell Pressure)를 텍스트와 색상으로 시각화
 * **김치 프리미엄(K-Premium)**: 실시간 환율을 적용하여 해외 거래소 대비 국내 거래소의 가격 차이를 %로 계산
 * **크로스 마켓 분석**: 기준 코인(Base Coin)을 통일하되, 다양한 결제 화폐(Quote Currency, 예: KRW, USDT, BTC, ETH) 간의 비교를 지원하여 폭넓은 분석 가능
 
@@ -71,7 +74,7 @@ Binance, Upbit, Bybit 등 주요 거래소의 시세를 실시간으로 비교�
     - 메이저/마이너 거래소 전체 리스트 검색 기능
     - 기축 통화별(USD, KRW, ETH, USDT) 그룹화 및 비교 기능
 - [x] **심층 차트 분석**:
-    - 과거 데이터(OHLCV) 연동을 통한 기간별(1D, 1M, 3M, 1Y) 추세선 그래프 구현
+    - 과거 데이터(OHLCV) 연동을 통한 기간별(1H, 1D, 1M, 3M, 1Y) 추세선 그래프 구현
     - MongoDB 연동을 통한 실시간 스프레드(Spread) 기록 및 시각화
 - [ ] **이상 감지 알림**: 급격한 가격 변동 및 대량 거래 포착 시 알림 기능 (진행 예정)
 
