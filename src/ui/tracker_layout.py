@@ -4,7 +4,7 @@ from kivy.uix.boxlayout import BoxLayout
 from kivy.graphics import Color, Line
 
 from services.analysis_service import calculate_k_premium
-from ui.trend_graph_widget import DetailGraphPopup
+from ui.trend_graph import DetailGraphPopup
 
 class PriceTrackerLayout(BoxLayout):
     def __init__(self, price_service, db_service=None, **kwargs):
